@@ -13,9 +13,6 @@ case class ForbiddenAPIException(resp: String) extends Throwable(resp)
 case class UnknownAPIException(resp: String) extends Throwable(resp)
 case class ResourceNotFoundException(url: String) extends Throwable("resource not found: " + url)
 
-sealed abstract class Protocol
-case object HTTP  extends Protocol {override def toString() = "http"}
-case object HTTPS extends Protocol {override def toString() = "https"}
 
 class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val hostname: String, val port: Int, val apiKey: String, val apiSecret: String) {
 
@@ -58,4 +55,7 @@ object GestaltSecurityClient {
 
   def apply(protocol: Protocol, hostname: String, port: Int, apiKey: String, apiSecret: String)(implicit app: Application) =
     new GestaltSecurityClient(client = WS.client, protocol = protocol, hostname = hostname, port = port, apiKey = apiKey, apiSecret = apiSecret)
+
+  def apply(securityConfig: GestaltSecurityConfig)(implicit app: Application) =
+    new GestaltSecurityClient(client = WS.client, securityConfig.protocol,securityConfig.host,securityConfig.port,securityConfig.apiKey,securityConfig.apiSecret)
 }

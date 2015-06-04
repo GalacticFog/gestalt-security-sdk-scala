@@ -2,7 +2,7 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "0.1.0-SNAPSHOT"
+version := "0.1.1-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -17,6 +17,8 @@ resolvers ++= Seq(
   "snapshots" at "http://scala-tools.org/repo-snapshots",
   "releases"  at "http://scala-tools.org/repo-releases")
 
+libraryDependencies += "com.galacticfog" % "gestalt-io_2.11" % "1.0-SNAPSHOT"
+
 //
 // Adds project name to prompt like in a Play project
 //
@@ -26,10 +28,13 @@ shellPrompt in ThisBuild := { state => "\033[0;36m" + Project.extract(state).cur
 // Play JSON/WS
 // ----------------------------------------------------------------------------
 
+libraryDependencies += "com.typesafe.play" % "play-json_2.11" % "2.4.0-M2"
+
 libraryDependencies ++= Seq(
     ws
 )
 
+// MockWS for testing
 libraryDependencies += "de.leanovate.play-mockws" %% "play-mockws" % "0.13" % "test"
 
 // ----------------------------------------------------------------------------
