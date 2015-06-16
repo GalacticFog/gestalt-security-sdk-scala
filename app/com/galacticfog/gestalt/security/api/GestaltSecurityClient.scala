@@ -50,6 +50,10 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
 
   def post(endpoint: String, payload: JsValue): Future[JsValue] = genRequest(endpoint).post(payload).flatMap(processResponse)
 
+  def put(endpoint: String, payload: JsValue): Future[JsValue] = genRequest(endpoint).put(payload).flatMap(processResponse)
+
+  def put(endpoint: String): Future[JsValue] = genRequest(endpoint).put("").flatMap(processResponse)
+
   def delete(endpoint: String): Future[JsValue] = genRequest(endpoint).delete().flatMap(processResponse)
 }
 

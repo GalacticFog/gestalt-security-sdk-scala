@@ -50,7 +50,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         case (GET, baseUrl) => Action { Ok(testResp) }
       }
       implicit val security = getSecurity
-      val org = await(GestaltOrg.getCurrentOrg)
+      val org = await(GestaltOrg.getDefaultOrg)
       org.orgName must_== (testResp \ "orgName").as[String]
       org.orgId must_== (testResp \ "orgId").as[String]
     }
@@ -148,7 +148,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val createGrant = GestaltRightGrant("testGrantName", Some("testGrantValue"))
       val url = baseUrl + s"/apps/${testApp.appId}/users/${testUsername}/rights/${createGrant.grantName}"
       val ws = MockWS {
-        case (POST, url) => Action { Ok(Json.toJson(createGrant)) }
+        case (PUT, url) => Action { Ok(Json.toJson(createGrant)) }
       }
       implicit val security = getSecurity
       val newUser = await(testApp.addGrant(testUsername,createGrant))

@@ -9,6 +9,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 import scala.util.{Failure, Try}
 
 case class GestaltApp(appId: String, appName: String, org: GestaltOrg) {
+
   def authorizeUser(creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
     client.post(s"apps/${appId}/auth",creds.toJson) map {
       _.asOpt[GestaltAuthResponse]
@@ -18,19 +19,11 @@ case class GestaltApp(appId: String, appName: String, org: GestaltOrg) {
   }
 
   def createUser(create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
-    client.post(s"apps/${appId}/users",Json.toJson(create)) map {
-      json => Try{json.as[GestaltAccount]}
-    } recover {
-      case e: Throwable => Failure(e)
-    }
+    GestaltApp.createUser(appId, create)
   }
 
   def addGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
-    client.post(s"apps/${appId}/users/${username}/rights/${grant.grantName}",Json.toJson(grant)) map {
-      json => Try{json.as[GestaltRightGrant]}
-    } recover {
-      case e: Throwable => Failure(e)
-    }
+    GestaltApp.addGrant(appId, username, grant)
   }
 
   def updateGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = addGrant(username, grant)
@@ -61,6 +54,22 @@ case object GestaltApp {
       _.asOpt[GestaltApp]
     } recover {
       case notFound: ResourceNotFoundException => None
+    }
+  }
+
+  def createUser(appId: String, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
+    client.post(s"apps/${appId}/users",Json.toJson(create)) map {
+      json => Try{json.as[GestaltAccount]}
+    } recover {
+      case e: Throwable => Failure(e)
+    }
+  }
+
+  def addGrant(appId: String, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
+    client.put(s"apps/${appId}/users/${username}/rights/${grant.grantName}",Json.toJson(grant)) map {
+      json => Try{json.as[GestaltRightGrant]}
+    } recover {
+      case e: Throwable => Failure(e)
     }
   }
 }
