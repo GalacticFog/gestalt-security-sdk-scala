@@ -26,6 +26,6 @@ case object GestaltOrg {
     }
   }
 
-  @deprecated("Use getDefaultOrg")
+  @deprecated("Use getDefaultOrg","0.1.1")
   def getCurrentOrg(implicit client: GestaltSecurityClient): Future[GestaltOrg] = getDefaultOrg
 }
