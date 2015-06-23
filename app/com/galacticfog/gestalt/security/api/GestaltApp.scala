@@ -29,21 +29,11 @@ case class GestaltApp(appId: String, appName: String, org: GestaltOrg) {
   def updateGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = addGrant(username, grant)
 
   def deleteGrant(username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
-    val d = client.delete(s"apps/${appId}/users/${username}/rights/${grantName}")
-    d map {
-      json => Try { json.as[DeleteResult].wasDeleted }
-    } recover {
-      case notfound: ResourceNotFoundException => Failure(notfound)
-      case e: Throwable => Failure(e)
-    }
+    GestaltApp.deleteGrant( appId, username, grantName )
   }
 
   def listGrants(username: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltRightGrant]]] = {
-    client.get(s"apps/${appId}/users/${username}/rights") map { js =>
-      Try{js.as[Seq[GestaltRightGrant]]}
-    } recover {
-      case e: Throwable => Failure(e)
-    }
+    GestaltApp.listGrants( appId, username )
   }
 
 }
@@ -72,6 +62,26 @@ case object GestaltApp {
       case e: Throwable => Failure(e)
     }
   }
+
+  def listGrants(appId : String, username: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltRightGrant]]] = {
+    client.get(s"apps/${appId}/users/${username}/rights") map { js =>
+      Try{js.as[Seq[GestaltRightGrant]]}
+    } recover {
+      case e: Throwable => Failure(e)
+    }
+  }
+
+  def deleteGrant(appId : String, username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
+    val d = client.delete(s"apps/${appId}/users/${username}/rights/${grantName}")
+    d map {
+      json => Try { json.as[DeleteResult].wasDeleted }
+    } recover {
+      case notfound: ResourceNotFoundException => Failure(notfound)
+      case e: Throwable => Failure(e)
+    }
+  }
+
+
 }
 
 
