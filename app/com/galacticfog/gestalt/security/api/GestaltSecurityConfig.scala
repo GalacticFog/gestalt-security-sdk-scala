@@ -86,7 +86,7 @@ object GestaltSecurityConfig {
   def getSecurityConfigFromMeta(meta: Option[Gestalt]): Option[GestaltSecurityConfig] = {
     for {
       m <- meta
-      str <- m.getConfig("authentication").toOption
+      str <- Try{ m.getConfig("authentication") }.flatten.toOption // might throw, so wrap it
       json <- Try(Json.parse(str)).toOption
       config <- json.asOpt[GestaltSecurityConfig]
     } yield config
