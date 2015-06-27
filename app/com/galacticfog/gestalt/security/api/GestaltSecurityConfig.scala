@@ -89,7 +89,11 @@ object GestaltSecurityConfig {
       m <- meta
       str <- Try{
         val config = m.getConfig("authentication")
-        Logger.info("Got 'authentication' config from meta:" + m.local.context)
+        Logger.info("Attempted to get 'authentication' config from meta:" + Json.prettyPrint(m.local.context.get.toJson))
+        config match {
+          case Success(config) => Logger.info("Meta returned config: " + config)
+          case Failure(error)  => Logger.info("Meta returned error: " + error)
+        }
         config
       }.flatten.toOption // might throw, so wrap it
       json <- Try(Json.parse(str)).toOption
