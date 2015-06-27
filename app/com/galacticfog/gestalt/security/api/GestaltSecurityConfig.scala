@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.galacticfog.gestalt.Gestalt
 import com.galacticfog.gestalt.io.ConfigEntityReader
 import com.galacticfog.gestalt.io.GestaltConfig.ConfigEntity
+import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -86,7 +87,11 @@ object GestaltSecurityConfig {
   def getSecurityConfigFromMeta(meta: Option[Gestalt]): Option[GestaltSecurityConfig] = {
     for {
       m <- meta
-      str <- Try{ m.getConfig("authentication") }.flatten.toOption // might throw, so wrap it
+      str <- Try{
+        val config = m.getConfig("authentication")
+        Logger.info("Got 'authentication' config from meta:" + m.local.context)
+        config
+      }.flatten.toOption // might throw, so wrap it
       json <- Try(Json.parse(str)).toOption
       config <- json.asOpt[GestaltSecurityConfig]
     } yield config
