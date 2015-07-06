@@ -21,9 +21,9 @@ object Res {
   val ErrConfigNotFound        = "Could not find configuration in path."
   val ErrPathNotFound          = "Path not found."
   val ErrDirectoryNeedFile     = "Value is a directory, File required."
-  val ErrGestaltConfigNotFound = "Gestalt security configuration not found."
-  val ErrGestaltConfigInvalid  = "Invalid Gestalt security configuration data."
-  val ErrMalformedJson         = "Malformed JSON."
+  val ErrGestaltConfigNotFound = "A Gestalt security configuration file could not found."
+  val ErrGestaltConfigInvalid  = "Invalid Gestalt security configuration data: %s"
+  val ErrMalformedJson         = "Malformed JSON: %s"
 }
 
 case class GestaltSecurityConfig(protocol: Protocol,
@@ -86,8 +86,11 @@ object GestaltSecurityConfig {
 
   def getSecurityConfigFromMeta(meta: Option[Gestalt]): Option[GestaltSecurityConfig] = {
     for {
-      m <- meta
-      str <- Try{
+      m <- {
+        Logger.info("> querying meta for named config 'authentication'")
+        meta
+      }
+      str <- Try { // might throw, so wrap it in a Try
         val config = m.getConfig("authentication")
         Logger.info("Attempted to get 'authentication' config from meta:" + Json.prettyPrint(m.local.context.get.toJson))
         config match {
@@ -95,14 +98,14 @@ object GestaltSecurityConfig {
           case Failure(error)  => Logger.info("Meta returned error: " + error)
         }
         config
-      }.flatten.toOption // might throw, so wrap it
+      }.flatten.toOption
       json <- Try(Json.parse(str)).toOption
       config <- json.asOpt[GestaltSecurityConfig]
     } yield config
   }
 
   def getSecurityConfigFromEnv: Option[GestaltSecurityConfig] = {
-    println("checking environment for Gestalt security config")
+    Logger.info("> checking environment for Gestalt security config")
     for {
       proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
       host   <- getEnv(eHOSTNAME)
@@ -114,19 +117,22 @@ object GestaltSecurityConfig {
   }
 
   def getSecurityConfigFromFile: Option[GestaltSecurityConfig] = {
-    println("checking filesystem for Gestalt security config")
+    Logger.info("> checking filesystem for Gestalt security config")
     val reader = new ConfigEntityReader[GestaltSecurityConfig]
-    val data = loadFile(resolvePath) match {
-      case Success(file) => file
-      case Failure(ex) => throw ex
-    }
-    reader.read(data) match {
-      case Success(context) => Some(context)
+    val securityContext = for {
+      path <- resolvePath
+      data <- loadFile(path)
+      context <- reader.read(data)
+    } yield context
+    securityContext match {
+      case Success(c) => Some(c)
       case Failure(ex) => ex match {
         case jpe: JsonParseException =>
-          throw error(Res.ErrMalformedJson, Some(jpe))
+          Logger.info(Res.ErrMalformedJson.format(jpe.getMessage))
+          None
         case iae: IllegalArgumentException =>
-          throw error(Res.ErrGestaltConfigInvalid, Some(iae))
+          Logger.info(Res.ErrGestaltConfigInvalid.format(iae.getMessage))
+          None
       }
     }
   }
@@ -196,15 +202,15 @@ object GestaltSecurityConfig {
     else Failure(error(Res.ErrGestaltConfigNotFound, None))
   }
 
-  private[gestalt] def loadFile(path: Try[String]): Try[String] = {
-    path map { p =>
-      println(s"using file => $p")
-      if (!exists(p)) throw error("%s, %s".format(p,  Res.ErrFileNotFound))
-      else if (isDir(p)) {
-        if (exists(confname(p))) mkString(confname(p))
-        else throw error("%s, %s".format(p, Res.ErrDirectoryNeedFile))
+  private[gestalt] def loadFile(path: String): Try[String] = {
+    Try {
+      Logger.info(s"> loading file: $path")
+      if (!exists(path)) throw error("%s, %s".format(path, Res.ErrFileNotFound))
+      else if (isDir(path)) {
+        if (exists(confname(path))) mkString(confname(path))
+        else throw error("%s, %s".format(path, Res.ErrDirectoryNeedFile))
       }
-      else mkString(p)
+      else mkString(path)
     }
   }
 
