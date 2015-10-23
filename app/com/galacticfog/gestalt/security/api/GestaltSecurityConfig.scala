@@ -26,12 +26,26 @@ object Res {
   val ErrMalformedJson         = "Malformed JSON: %s"
 }
 
-case class GestaltSecurityConfig(protocol: Protocol,
-                                 host: String,
+sealed trait GestaltSecurityMode {
+  def label: String
+}
+final case object DELEGATED_SECURITY_MODE extends GestaltSecurityMode {val label = "DELEGATED"}
+final case object FRAMEWORK_SECURITY_MODE extends GestaltSecurityMode {val label = "FRAMEWORK"}
+
+case class GestaltSecurityConfig(mode: GestaltSecurityMode,
+                                 protocol: Protocol,
+                                 hostname: String,
                                  port: Int,
-                                 apiKey: String,
-                                 apiSecret: String,
-                                 appId: Option[String]) extends ConfigEntity
+                                 apiKey: Option[String],
+                                 apiSecret: Option[String],
+                                 appId: Option[String]) extends ConfigEntity {
+  def isWellDefined: Boolean = !hostname.isEmpty && port > 0 && (mode match {
+    case DELEGATED_SECURITY_MODE =>
+      apiKey.exists(_.isEmpty == false) && apiSecret.exists(_.isEmpty == false) && appId.exists(_.isEmpty == false)
+    case FRAMEWORK_SECURITY_MODE =>
+      true
+  })
+}
 
 object GestaltSecurityConfig {
   implicit val gestaltSecurityProtocolFormat = new Format[Protocol] {
@@ -49,14 +63,34 @@ object GestaltSecurityConfig {
     }
   }
 
-  implicit val gestaltSecurityConfigFormat: Format[GestaltSecurityConfig] = (
-    (__ \ "protocol").format[Protocol] and
-      (__ \ "hostname").format[String] and
-      (__ \ "port").format[Int] and
-      (__ \ "apiKey").format[String] and
-      (__ \ "apiSecret").format[String] and
-      (__ \ "appId").formatNullable[String]
-    )(GestaltSecurityConfig.apply, unlift(GestaltSecurityConfig.unapply))
+  implicit val gestaltSecurityConfigWrites = new Writes[GestaltSecurityConfig]{
+    override def writes(o: GestaltSecurityConfig): JsValue = Json.obj(
+      "protocol"  -> o.protocol,
+      "hostname"  -> o.hostname,
+      "port"      -> o.port,
+      "apiKey"    -> o.apiKey,
+      "apiSecret" -> o.apiSecret,
+      "appId"     -> o.appId
+    )
+  }
+
+  implicit val gestaltSecurityConfigReads = new Reads[GestaltSecurityConfig]{
+    override def reads(json: JsValue): JsResult[GestaltSecurityConfig] = {
+      val delegated = for {
+        protocol <- (json \ "protocol").validate[Protocol]
+        hostname <- (json \ "hostname").validate[String]
+        port <- (json \ "port").validate[Int]
+        appId <- (json \ "appId").validate[String]
+        apiKey <- (json \ "apiKey").validate[String]
+        apiSecret <- (json \ "apiSecret").validate[String]
+      } yield GestaltSecurityConfig(DELEGATED_SECURITY_MODE,protocol,hostname,port,appId = Some(appId),apiKey = Some(apiKey),apiSecret = Some(apiSecret))
+      delegated orElse(for {
+        protocol <- (json \ "protocol").validate[Protocol]
+        hostname <- (json \ "hostname").validate[String]
+        port <- (json \ "port").validate[Int]
+      } yield GestaltSecurityConfig(FRAMEWORK_SECURITY_MODE,protocol,hostname,port,appId = None,apiKey = None,apiSecret = None))
+    }
+  }
 
   private val configFileName = "gestalt-security.conf"
 
@@ -106,14 +140,19 @@ object GestaltSecurityConfig {
 
   def getSecurityConfigFromEnv: Option[GestaltSecurityConfig] = {
     Logger.info("> checking environment for Gestalt security config")
-    for {
+    val delegated = for {
       proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
       host   <- getEnv(eHOSTNAME)
-      port   <- getEnv(ePORT)
+      port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
       key    <- getEnv(eKEY)
       secret <- getEnv(eSECRET)
-      appId   = getEnv(eAPPID)
-    } yield GestaltSecurityConfig(protocol=proto, host=host, port=port.toInt, apiKey=key, apiSecret=secret, appId=appId)
+      appId  <- getEnv(eAPPID)
+    } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=Some(key), apiSecret=Some(secret), appId=Some(appId))
+    delegated.orElse(for {
+      proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
+      host   <- getEnv(eHOSTNAME)
+      port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
+    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, None, None, None))
   }
 
   def getSecurityConfigFromFile: Option[GestaltSecurityConfig] = {

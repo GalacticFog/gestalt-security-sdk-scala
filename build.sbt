@@ -2,11 +2,11 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "0.1.3-SNAPSHOT"
+version := "0.2.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.6"
 
 resolvers ++= Seq(
   "snapshots" at "http://scala-tools.org/repo-snapshots",
@@ -41,14 +41,15 @@ shellPrompt in ThisBuild := { state => "\033[0;36m" + Project.extract(state).cur
 // Play JSON/WS
 // ----------------------------------------------------------------------------
 
-libraryDependencies += "com.typesafe.play" % "play-json_2.11" % "2.4.0-M2"
+libraryDependencies += "com.typesafe.play" %% "play-json" % "2.4.0-M2"
 
 libraryDependencies ++= Seq(
     ws
 )
 
 // MockWS for testing
-libraryDependencies += "de.leanovate.play-mockws" %% "play-mockws" % "0.13" % "test"
+libraryDependencies += "de.leanovate.play-mockws" %% "play-mockws" % "2.3.0" % "test" withSources()
+
 
 // ----------------------------------------------------------------------------
 // Specs 2
@@ -56,6 +57,6 @@ libraryDependencies += "de.leanovate.play-mockws" %% "play-mockws" % "0.13" % "t
 
 libraryDependencies ++= Seq(
     "junit" % "junit" % "4.12" % "test",
-    "org.specs2" % "specs2-junit_2.11" % "2.4.17" % "test",
+    "org.specs2" %% "specs2-junit" % "2.4.17" % "test",
     "org.specs2" %% "specs2-core" % "2.4.17" % "test"
 )

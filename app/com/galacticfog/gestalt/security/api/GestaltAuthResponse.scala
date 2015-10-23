@@ -1,3 +1,3 @@
 package com.galacticfog.gestalt.security.api
 
-case class GestaltAuthResponse(account: GestaltAccount, rights: Seq[GestaltRightGrant])
+case class GestaltAuthResponse(account: GestaltAccount, groups: Seq[GestaltGroup], rights: Seq[GestaltRightGrant])
