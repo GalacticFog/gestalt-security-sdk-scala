@@ -1,5 +1,7 @@
 package com.galacticfog.gestalt.security.api
 
+import java.util.UUID
+
 import com.fasterxml.jackson.core.JsonParseException
 import com.galacticfog.gestalt.Gestalt
 import com.galacticfog.gestalt.io.ConfigEntityReader
@@ -38,10 +40,10 @@ case class GestaltSecurityConfig(mode: GestaltSecurityMode,
                                  port: Int,
                                  apiKey: Option[String],
                                  apiSecret: Option[String],
-                                 appId: Option[String]) extends ConfigEntity {
+                                 appId: Option[UUID]) extends ConfigEntity {
   def isWellDefined: Boolean = !hostname.isEmpty && port > 0 && (mode match {
     case DELEGATED_SECURITY_MODE =>
-      apiKey.exists(_.isEmpty == false) && apiSecret.exists(_.isEmpty == false) && appId.exists(_.isEmpty == false)
+      apiKey.exists(_.isEmpty == false) && apiSecret.exists(_.isEmpty == false) && appId.isDefined
     case FRAMEWORK_SECURITY_MODE =>
       true
   })
@@ -80,7 +82,7 @@ object GestaltSecurityConfig {
         protocol <- (json \ "protocol").validate[Protocol]
         hostname <- (json \ "hostname").validate[String]
         port <- (json \ "port").validate[Int]
-        appId <- (json \ "appId").validate[String]
+        appId <- (json \ "appId").validate[UUID]
         apiKey <- (json \ "apiKey").validate[String]
         apiSecret <- (json \ "apiSecret").validate[String]
       } yield GestaltSecurityConfig(DELEGATED_SECURITY_MODE,protocol,hostname,port,appId = Some(appId),apiKey = Some(apiKey),apiSecret = Some(apiSecret))
@@ -146,7 +148,7 @@ object GestaltSecurityConfig {
       port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
       key    <- getEnv(eKEY)
       secret <- getEnv(eSECRET)
-      appId  <- getEnv(eAPPID)
+      appId  <- getEnv(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
     } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=Some(key), apiSecret=Some(secret), appId=Some(appId))
     delegated.orElse(for {
       proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
