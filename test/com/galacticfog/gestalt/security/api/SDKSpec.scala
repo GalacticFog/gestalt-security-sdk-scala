@@ -254,7 +254,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "authenticate framework users against specified org" in new TestParameters {
       val grant = GestaltRightGrant(id = UUID.randomUUID, "launcher:full_access",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
       val testFQON = "test.some.org"
       val testUsername = "jdoe"
       val testPassword = "monkey"
@@ -452,7 +452,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "authenticate a user" in new TestParameters {
       val grant = GestaltRightGrant(id = UUID.randomUUID, "launcher:full_access",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), orgId = UUID.randomUUID())
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
       val route = (POST, url, Action(BodyParsers.parse.json) { request =>

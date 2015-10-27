@@ -2,6 +2,7 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 
+import play.api.Logger
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
@@ -33,9 +34,28 @@ case class GestaltOrgCreate(orgName: String)
 
 case object GestaltOrg {
 
+  def authorizeFrameworkUser(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.postWithAuth(s"auth", username = username, password = password) map { js =>
+      Logger.info(s"security returned 200: ${js}")
+      js.asOpt[GestaltAuthResponse]
+    } recover {
+      case forbidden: ForbiddenAPIException => None
+    }
+  }
+
   def authorizeFrameworkUser(orgFQON: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth(s"${orgFQON}/auth", username = username, password = password) map {
-      _.asOpt[GestaltAuthResponse]
+    client.postWithAuth(s"${orgFQON}/auth", username = username, password = password) map { js =>
+      Logger.info(s"security returned 200: ${js}")
+      js.asOpt[GestaltAuthResponse]
+    } recover {
+      case forbidden: ForbiddenAPIException => None
+    }
+  }
+
+  def authorizeFrameworkUser(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.postWithAuth(s"orgs/${orgId}/auth", username = username, password = password) map { js =>
+      Logger.info(s"security returned 200: ${js}")
+      js.asOpt[GestaltAuthResponse]
     } recover {
       case forbidden: ForbiddenAPIException => None
     }
