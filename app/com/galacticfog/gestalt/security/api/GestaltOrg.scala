@@ -71,8 +71,8 @@ case object GestaltOrg {
     client.postTry[GestaltDirectory](s"orgs/${orgId}/directories",Json.toJson(createRequest))
   }
 
-  def createOrg(orgName: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltOrg]] = {
-    client.postTry[GestaltOrg](s"orgs",Json.toJson(GestaltOrgCreate(orgName)))
+  def createSubOrg(parentOrgId: UUID, orgName: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltOrg]] = {
+    client.postTry[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(orgName)))
   }
 
   def createApp(orgId: String, createRequest: GestaltAppCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltApp]] = {
