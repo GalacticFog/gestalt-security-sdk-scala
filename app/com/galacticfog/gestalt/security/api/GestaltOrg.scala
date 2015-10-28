@@ -34,37 +34,40 @@ case class GestaltOrgCreate(orgName: String)
 
 case object GestaltOrg {
 
-  def authorizeFrameworkUser(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth(s"auth", username = username, password = password) map { js =>
-      Logger.info(s"security returned 200: ${js}")
-      js.asOpt[GestaltAuthResponse]
-    } recover {
-      case forbidden: ForbiddenAPIException => None
-    }
+  def createGroup(orgId: UUID, createRequest: GestaltGroupCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltGroup]] = {
+    client.postTry[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest))
+  }
+
+  def createGroup(orgId: UUID, createRequest: GestaltGroupCreateWithRights, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltGroup]] = {
+    client.postTryWithAuth[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest), username, password)
+  }
+
+  def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
+    client.postTry[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest))
+  }
+
+  def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
+    client.postTryWithAuth[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest), username, password)
+  }
+
+  def authorizeFrameworkUser(apiKey: String, apiSecret: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.postTryWithAuth[GestaltAuthResponse](s"auth", username = apiKey, password = apiSecret)
+      .map { _.toOption }
   }
 
   def authorizeFrameworkUser(orgFQON: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth(s"${orgFQON}/auth", username = username, password = password) map { js =>
-      Logger.info(s"security returned 200: ${js}")
-      js.asOpt[GestaltAuthResponse]
-    } recover {
-      case forbidden: ForbiddenAPIException => None
-    }
+    client.postTryWithAuth[GestaltAuthResponse](s"${orgFQON}/auth", username = username, password = password)
+      .map { _.toOption }
   }
 
   def authorizeFrameworkUser(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth(s"orgs/${orgId}/auth", username = username, password = password) map { js =>
-      Logger.info(s"security returned 200: ${js}")
-      js.asOpt[GestaltAuthResponse]
-    } recover {
-      case forbidden: ForbiddenAPIException => None
-    }
+    client.postTryWithAuth[GestaltAuthResponse](s"orgs/${orgId}/auth", username = username, password = password)
+      .map { _.toOption }
   }
 
   def getAppByName(orgId: String, appName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
-    GestaltOrg.getApps(orgId) map {
-      _.find {_.name == appName}
-    }
+    GestaltOrg.getApps(orgId)
+      .map { _.find {_.name == appName} }
   }
 
   def createDirectory(orgId: String, createRequest: GestaltDirectoryCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltDirectory]] = {
@@ -73,6 +76,20 @@ case object GestaltOrg {
 
   def createSubOrg(parentOrgId: UUID, orgName: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltOrg]] = {
     client.postTry[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(orgName)))
+  }
+
+  def createSubOrg(parentOrgId: UUID, orgName: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[GestaltOrg]] = {
+    client.postTryWithAuth[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(orgName)),username,password)
+  }
+
+  def deleteOrg(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
+    client.deleteTry(s"orgs/${orgId}")
+      .map { _.map { _.wasDeleted } }
+  }
+
+  def deleteOrg(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
+    client.deleteTryWithAuth(s"orgs/${orgId}", username = username, password = password)
+      .map { _.map { _.wasDeleted } }
   }
 
   def createApp(orgId: String, createRequest: GestaltAppCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltApp]] = {
@@ -93,11 +110,9 @@ case object GestaltOrg {
 
   def getById(orgId: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
     // different semantics for this one
-    client.get[GestaltOrg](s"orgs/${orgId}") map {
-      b => Some(b)
-    } recover {
-      case notFound: ResourceNotFoundException => None
-    }
+    client.get[GestaltOrg](s"orgs/${orgId}")
+      .map { b => Some(b) }
+      .recover { case notFound: ResourceNotFoundException => None }
   }
 }
 

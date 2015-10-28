@@ -64,8 +64,11 @@ object JsonImports {
 
   implicit val accountCredentialsFormat = Format(credentialRead,credentialWrite)
 
+  implicit val rightCreateRequest = Json.format[GestaltGrantCreate]
   implicit val accountCreateRequest = Json.format[GestaltAccountCreate]
   implicit val accountCreateRequestWithRights = Json.format[GestaltAccountCreateWithRights]
+  implicit val groupCreateRequest = Json.format[GestaltGroupCreate]
+  implicit val groupCreateRequestWithRights = Json.format[GestaltGroupCreateWithRights]
   implicit val accountStoreMappingCreateRequest = Json.format[GestaltAccountStoreMappingCreate]
   implicit val accountStoreMappingUpdateRequest = Json.format[GestaltAccountStoreMappingUpdate]
   implicit val appCreateRequest = Json.format[GestaltAppCreate]

@@ -15,53 +15,58 @@ case class DeleteResult(wasDeleted: Boolean)
 
 class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val hostname: String, val port: Int, val apiKey: String, val apiSecret: String) {
 
-  def postWithAuth(uri: String, username: String, password: String): Future[JsValue] = {
-    val url = s"${protocol}://${hostname}:${port}/${removeLeadingSlash(uri)}"
-    client.url(url)
-      .withAuth(username = username, password = password, scheme = WSAuthScheme.BASIC)
-      .withHeaders( "Accept" -> "application/json" )
-      .post("")
-      .flatMap(processResponse)
+  def postTryWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
+    postJson(uri, username, password) map {
+      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
+    } recover errors.convertToFailure
+  }
+
+  def postTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
+    postJson(uri, payload, username, password) map {
+      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
+    } recover errors.convertToFailure
+  }
+
+  def postTry[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
+    postTryWithAuth[T](uri, username = apiKey, password = apiSecret)
   }
 
   def postTry[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    postJson(uri,payload) map {
+    postTryWithAuth[T](uri, payload, username = apiKey, password = apiSecret)(fjs)
+  }
+
+  def putTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
+    putJson(uri,payload,username,password) map {
       implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
     } recover errors.convertToFailure
   }
 
   def putTry[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    putJson(uri,payload) map {
+    putTryWithAuth[T](uri, payload, apiKey, apiSecret)
+  }
+
+  def getTryWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
+    getJson(uri,username,password) map {
       implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
     } recover errors.convertToFailure
   }
 
   def getTry[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    getJson(uri) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+    getTryWithAuth[T](uri, apiKey, apiSecret)
   }
 
   def deleteTry(uri: String): Future[Try[DeleteResult]] = {
-    deleteJson(uri) map {
+    deleteTryWithAuth(uri, apiKey, apiSecret)
+  }
+
+  def deleteTryWithAuth(uri: String, username: String, password: String): Future[Try[DeleteResult]] = {
+    deleteJson(uri, username, password) map {
       implicit json => Try{json.as[DeleteResult]} recoverWith errors.handleParsingErrorAsFailure
     } recover errors.convertToFailure
   }
 
   def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
     getTry[T](uri) map {_.get}
-  }
-
-  def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
-    postTry[T](uri,payload) map {_.get}
-  }
-
-  def put[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
-    putTry[T](uri,payload) map {_.get}
-  }
-
-  def delete(uri: String)(implicit fjs : play.api.libs.json.Reads[DeleteResult]): Future[DeleteResult] = {
-    deleteTry(uri) map {_.get}
   }
 
   def processResponse(response: WSResponse): Future[JsValue] = {
@@ -85,9 +90,9 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     else endpoint
   }
 
-  private def genRequest(sendingJson: Boolean, endpoint: String): WSRequestHolder = {
+  private def genRequest(sendingJson: Boolean, endpoint: String, username: String, password: String): WSRequestHolder = {
     val url = s"${protocol}://${hostname}:${port}/${removeLeadingSlash(endpoint)}"
-    val rh = client.url(url).withAuth(username = apiKey, password = apiSecret, scheme = WSAuthScheme.BASIC)
+    val rh = client.url(url).withAuth(username = username, password = password, scheme = WSAuthScheme.BASIC)
     if (sendingJson) rh.withHeaders(
         "Content-Type" -> "application/json",
         "Accept" -> "application/json"
@@ -95,17 +100,20 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     else rh.withHeaders("Accept" -> "application/json")
   }
 
-  def getJson(endpoint: String): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint).get() flatMap processResponse
+  def getJson(endpoint: String, username: String, password: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint, username, password).get() flatMap processResponse
 
-  def postJson(endpoint: String, payload: JsValue): Future[JsValue] =
-    genRequest(sendingJson = true, endpoint).post(payload) flatMap processResponse
+  def postJson(endpoint: String, username: String, password: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint, username, password).post("") flatMap processResponse
 
-  def putJson(endpoint: String, payload: JsValue): Future[JsValue] =
-    genRequest(sendingJson = true, endpoint).put(payload) flatMap processResponse
+  def postJson(endpoint: String, payload: JsValue, username: String, password: String): Future[JsValue] =
+    genRequest(sendingJson = true, endpoint, username, password).post(payload) flatMap processResponse
 
-  def deleteJson(endpoint: String): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint).delete() flatMap processResponse
+  def putJson(endpoint: String, payload: JsValue, username: String, password: String): Future[JsValue] =
+    genRequest(sendingJson = true, endpoint, username, password).put(payload) flatMap processResponse
+
+  def deleteJson(endpoint: String, username: String, password: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint, username, password).delete() flatMap processResponse
 }
 
 object GestaltSecurityClient {

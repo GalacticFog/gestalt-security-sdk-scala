@@ -60,28 +60,23 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     }
 
     "use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
-      await(security.getJson("/"))
+      await(security.getJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
-      await(security.deleteJson("/"))
+      await(security.deleteJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
-    "use apiKey and apiSecret for authentication on POST" in new FullyMockedWSClient {
-      await(security.postJson("/",Json.obj()))
+    "use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
+      await(security.postJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
-      await(security.postJson("/",Json.obj()))
+      await(security.postJson("/",Json.obj(),apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
-    }
-
-    "use provided username and password for postWithAuth" in new FullyMockedWSClient {
-      await(security.postWithAuth("/","localuser","localpass"))
-      there was one(testHolder).withAuth(Matchers.eq("localuser"), Matchers.eq("localpass"), Matchers.any[WSAuthScheme])
     }
 
   }

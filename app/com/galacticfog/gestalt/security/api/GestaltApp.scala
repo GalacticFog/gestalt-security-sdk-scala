@@ -58,8 +58,9 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 case object GestaltApp {
 
   def authorizeUser(appId: UUID, creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postJson(s"apps/${appId}/auth",creds.toJson) map {
-      _.asOpt[GestaltAuthResponse]
+    client.postTry[GestaltAuthResponse](s"apps/${appId}/auth",creds.toJson) map {
+      garTry =>
+        garTry.toOption
     } recover {
       case forbidden: ForbiddenAPIException => None
     }
