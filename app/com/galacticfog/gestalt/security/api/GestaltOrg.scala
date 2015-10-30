@@ -96,6 +96,10 @@ case object GestaltOrg {
     client.postTry[GestaltApp](s"orgs/${orgId}/apps",Json.toJson(createRequest))
   }
 
+  def getOrgs(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltOrg]]] = {
+    client.getTryWithAuth[Seq[GestaltOrg]]("orgs",username,password)
+  }
+
   def getApps(orgId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = {
     client.get[Seq[GestaltApp]](s"orgs/${orgId}/apps") 
   }

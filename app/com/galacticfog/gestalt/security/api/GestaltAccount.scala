@@ -1,10 +1,20 @@
 package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
+import com.galacticfog.gestalt.security.api.json.JsonImports._
+
+import scala.concurrent.Future
+import scala.util.Try
 
 case class GestaltAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directoryId: UUID) extends GestaltResource {
   override val name: String = username
   override val href: String = s"/accounts/${id}"
+}
+
+case object GestaltAccount {
+  def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
+    client.getTryWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)
+  }
 }
 
 case class GestaltAccountCreate(username: String,
@@ -30,5 +40,12 @@ case class GestaltGroup(id: UUID, name: String, directoryId: UUID, disabled: Boo
 
 case class GestaltGroupCreate(name: String)
 
+
 case class GestaltGroupCreateWithRights(name: String,
                                         rights: Option[Seq[GestaltRightGrant]] = None)
+
+case object GestaltGroup {
+  def getGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
+    client.getTryWithAuth[Seq[GestaltGroup]]("groups",username,password)
+  }
+}
