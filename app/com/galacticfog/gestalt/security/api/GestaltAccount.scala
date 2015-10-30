@@ -15,6 +15,10 @@ case object GestaltAccount {
   def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
     client.getTryWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)
   }
+
+  def getAccounts(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltAccount]]] = {
+    client.getTryWithAuth[Seq[GestaltAccount]](s"accounts",username,password)
+  }
 }
 
 case class GestaltAccountCreate(username: String,

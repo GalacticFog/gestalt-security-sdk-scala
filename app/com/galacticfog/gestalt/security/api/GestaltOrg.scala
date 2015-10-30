@@ -42,6 +42,10 @@ case object GestaltOrg {
     client.postTryWithAuth[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest), username, password)
   }
 
+  def getOrgAccounts(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltAccount]]] = {
+    client.getTryWithAuth[Seq[GestaltAccount]](s"orgs/${orgId}/accounts",username,password)
+  }
+
   def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
     client.postTry[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest))
   }
