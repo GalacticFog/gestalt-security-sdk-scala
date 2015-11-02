@@ -30,9 +30,23 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
   def getApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.getApps(id.toString)
 }
 
+case class GestaltOrgWithChildren(id: UUID, name: String, fqon: String, parent: Option[ResourceLink], children: Seq[GestaltOrgWithChildren]) extends GestaltResource {
+  override val href: String = s"/orgs/${id}"
+}
+
+case class GestaltOrgSync(accounts: Seq[GestaltOrgAccount], orgTree: GestaltOrgWithChildren)
+
 case class GestaltOrgCreate(orgName: String)
 
 case object GestaltOrg {
+
+  def syncOrgTree(orgId: Option[UUID], username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltOrgSync] = {
+    client.getWithAuth[GestaltOrgSync](
+      uri = orgId map{id => s"orgs/${id}/sync"} getOrElse "sync",
+      username = username,
+      password = password
+    )
+  }
 
   def createGroup(orgId: UUID, createRequest: GestaltGroupCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltGroup]] = {
     client.postTry[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest))

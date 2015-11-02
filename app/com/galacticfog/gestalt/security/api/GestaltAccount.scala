@@ -11,6 +11,24 @@ case class GestaltAccount(id: UUID, username: String, firstName: String, lastNam
   override val href: String = s"/accounts/${id}"
 }
 
+case class GestaltOrgAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directoryId: UUID, assignedOrgs: Seq[ResourceLink]) extends GestaltResource {
+  override val name: String = username
+  override val href: String = s"/accounts/${id}"
+}
+
+case object GestaltOrgAccount {
+  def fromAccount(account: GestaltAccount, assignedOrgs: Seq[ResourceLink]): GestaltOrgAccount = GestaltOrgAccount(
+    id = account.id,
+    username = account.username,
+    firstName = account.firstName,
+    lastName = account.lastName,
+    email = account.email,
+    phoneNumber = account.phoneNumber,
+    directoryId = account.directoryId,
+    assignedOrgs = assignedOrgs
+  )
+}
+
 case object GestaltAccount {
   def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
     client.getTryWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)

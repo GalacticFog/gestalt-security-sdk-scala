@@ -172,6 +172,53 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       testOrg.href must_== s"/orgs/${testOrg.id}"
     }
 
+    "support sync against org root" in new TestParameters {
+      val chld = GestaltOrgWithChildren(UUID.randomUUID(), "child", "child", None, Seq())
+      val root = GestaltOrgWithChildren(UUID.randomUUID(), "root", "root", None, Seq(chld))
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", UUID.randomUUID())
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", UUID.randomUUID())
+      val rootUrl = baseUrl + "/sync"
+      val route = (GET, rootUrl, Action {
+        Ok(Json.toJson(GestaltOrgSync(
+          accounts = Seq(
+            GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink, root.getLink)),
+            GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
+          ),
+          orgTree = root
+        )))
+      })
+      implicit val security = getSecurity(route)
+      val rootSync = await(GestaltOrg.syncOrgTree(None, "username", "password"))
+      rootSync.orgTree must_== root
+      rootSync.accounts must_== Seq(
+        GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink, root.getLink)),
+        GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
+      )
+    }
+
+    "support sync against suborg" in new TestParameters {
+      val chld = GestaltOrgWithChildren(UUID.randomUUID(), "child", "child", None, Seq())
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", UUID.randomUUID())
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", UUID.randomUUID())
+      val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
+      val route = (GET, chldUrl, Action {
+        Ok(Json.toJson(GestaltOrgSync(
+          accounts = Seq(
+            GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink)),
+            GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
+          ),
+          orgTree = chld
+        )))
+      })
+      implicit val security = getSecurity(route)
+      val subSync = await(GestaltOrg.syncOrgTree(Some(chld.id), "username", "password"))
+      subSync.orgTree must_== chld
+      subSync.accounts must_== Seq(
+        GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink)),
+        GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
+      )
+    }
+
     "return current org" in new TestParameters {
       val returnedOrg = GestaltOrg(id = UUID.randomUUID, "Test Org", "abcdefgh", None, Seq() )
       val url = baseUrl + "/orgs/current"
