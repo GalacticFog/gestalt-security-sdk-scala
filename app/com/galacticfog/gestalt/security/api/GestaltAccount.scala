@@ -6,27 +6,9 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 import scala.concurrent.Future
 import scala.util.Try
 
-case class GestaltAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directoryId: UUID) extends GestaltResource {
+case class GestaltAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directory: GestaltDirectory) extends GestaltResource {
   override val name: String = username
   override val href: String = s"/accounts/${id}"
-}
-
-case class GestaltOrgAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directoryId: UUID, assignedOrgs: Seq[ResourceLink]) extends GestaltResource {
-  override val name: String = username
-  override val href: String = s"/accounts/${id}"
-}
-
-case object GestaltOrgAccount {
-  def fromAccount(account: GestaltAccount, assignedOrgs: Seq[ResourceLink]): GestaltOrgAccount = GestaltOrgAccount(
-    id = account.id,
-    username = account.username,
-    firstName = account.firstName,
-    lastName = account.lastName,
-    email = account.email,
-    phoneNumber = account.phoneNumber,
-    directoryId = account.directoryId,
-    assignedOrgs = assignedOrgs
-  )
 }
 
 case object GestaltAccount {

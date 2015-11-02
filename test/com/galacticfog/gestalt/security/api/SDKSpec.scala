@@ -47,7 +47,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       lastName = "Perry",
       email = "jperry202@cdf.cu",
       phoneNumber = "850-867-5309",
-      directoryId = testDir.id
+      directory = testDir
     )
     val testMapping = GestaltAccountStoreMapping(UUID.randomUUID,"Staff Members","Staff members authorized for this app.",DIRECTORY,testDir.id,testApp.id,false,false)
 
@@ -173,50 +173,38 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "support sync against org root" in new TestParameters {
-      val chld = GestaltOrgWithChildren(UUID.randomUUID(), "child", "child", None, Seq())
-      val root = GestaltOrgWithChildren(UUID.randomUUID(), "root", "root", None, Seq(chld))
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", UUID.randomUUID())
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", UUID.randomUUID())
+      val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, Seq())
+      val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, Seq(chld.getLink))
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
       val rootUrl = baseUrl + "/sync"
       val route = (GET, rootUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
-          accounts = Seq(
-            GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink, root.getLink)),
-            GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
-          ),
-          orgTree = root
+          accounts = Seq( jane, john ),
+          orgs = Seq(root,chld)
         )))
       })
       implicit val security = getSecurity(route)
       val rootSync = await(GestaltOrg.syncOrgTree(None, "username", "password"))
-      rootSync.orgTree must_== root
-      rootSync.accounts must_== Seq(
-        GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink, root.getLink)),
-        GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
-      )
+      rootSync.orgs must containAllOf(Seq(root,chld))
+      rootSync.accounts must containAllOf(Seq(jane,john))
     }
 
     "support sync against suborg" in new TestParameters {
-      val chld = GestaltOrgWithChildren(UUID.randomUUID(), "child", "child", None, Seq())
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", UUID.randomUUID())
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", UUID.randomUUID())
+      val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, Seq())
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
       val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
       val route = (GET, chldUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
-          accounts = Seq(
-            GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink)),
-            GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
-          ),
-          orgTree = chld
+          accounts = Seq(jane,john),
+          orgs = Seq(chld)
         )))
       })
       implicit val security = getSecurity(route)
       val subSync = await(GestaltOrg.syncOrgTree(Some(chld.id), "username", "password"))
-      subSync.orgTree must_== chld
-      subSync.accounts must_== Seq(
-        GestaltOrgAccount.fromAccount(jane, Seq(chld.getLink)),
-        GestaltOrgAccount.fromAccount(john, Seq(chld.getLink))
-      )
+      subSync.orgs must_== Seq(chld)
+      subSync.accounts must containAllOf(Seq(jane,john))
     }
 
     "return current org" in new TestParameters {
@@ -412,7 +400,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testUsername = "jdoe"
       val testPassword = "monkey"
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testAccount.directoryId, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testDir.id, disabled = false)
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
@@ -436,7 +424,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add user with groups to an org" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testAccount.directoryId, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testDir.id, disabled = false)
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
@@ -460,7 +448,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add group to an org" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testAccount.directoryId, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testDir.id, disabled = false)
       val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
 
       val create = GestaltGroupCreateWithRights(
@@ -479,7 +467,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add group to an org with auth override" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testAccount.directoryId, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testDir.id, disabled = false)
       val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
       val testUsername = "jdoe"
       val testPassword = "monkey"
@@ -506,8 +494,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list all accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", "", "", testDir.id)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", "", "", testDir.id)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", "", "", testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", "", "", testDir)
       val url = baseUrl + s"/apps/${testApp.id}/accounts"
       val route = (GET, url, Action { request =>
         Ok(Json.toJson(Seq(acc1,acc2)))
@@ -749,8 +737,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list directory accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", "", "", testDir.id)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", "", "", testDir.id)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", "", "", testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", "", "", testDir)
       val testResp = Json.toJson(Seq(acc1, acc2))
       val url = baseUrl + s"/directories/${testDir.id}/accounts"
       val route = (GET, url, Action {

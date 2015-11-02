@@ -29,12 +29,10 @@ object JsonImports {
 
   implicit val linkFormat = Json.format[ResourceLink]
   implicit val orgFormat = Json.format[GestaltOrg]
-  implicit val orgTreeFormat = Json.format[GestaltOrgWithChildren]
   implicit val appFormat = Json.format[GestaltApp]
   implicit val dirFormat = Json.format[GestaltDirectory]
   implicit val groupFormat = Json.format[GestaltGroup]
   implicit val acctFormat = Json.format[GestaltAccount]
-  implicit val orgAcctFormat = Json.format[GestaltOrgAccount]
   implicit val grantFormat = Json.format[GestaltRightGrant]
   implicit val authFormat = Json.format[GestaltAuthResponse]
   implicit val storeMappingFormat = Json.format[GestaltAccountStoreMapping]

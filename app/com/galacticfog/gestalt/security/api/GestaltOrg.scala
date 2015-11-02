@@ -30,11 +30,7 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
   def getApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.getApps(id.toString)
 }
 
-case class GestaltOrgWithChildren(id: UUID, name: String, fqon: String, parent: Option[ResourceLink], children: Seq[GestaltOrgWithChildren]) extends GestaltResource {
-  override val href: String = s"/orgs/${id}"
-}
-
-case class GestaltOrgSync(accounts: Seq[GestaltOrgAccount], orgTree: GestaltOrgWithChildren)
+case class GestaltOrgSync(accounts: Seq[GestaltAccount], orgs: Seq[GestaltOrg])
 
 case class GestaltOrgCreate(orgName: String)
 
