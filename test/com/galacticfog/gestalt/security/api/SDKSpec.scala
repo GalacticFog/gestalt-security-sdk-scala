@@ -305,7 +305,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "create a directory" in new TestParameters {
-      val createRequest = GestaltDirectoryCreate(testDir.name, testDir.description)
+      val createRequest = GestaltDirectoryCreate(testDir.name, Some(testDir.description), config = None)
       val url = baseUrl + s"/orgs/${testOrg.id}/directories"
       val route = (POST, url, Action { request =>
         request.body.asJson match {
@@ -453,7 +453,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
-        rights = Some(Seq(testGrant))
+        rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
       security.postTry[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create)) returns
@@ -474,7 +474,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
-        rights = Some(Seq(testGrant))
+        rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
       security.postTryWithAuth[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create), testUsername, testPassword) returns

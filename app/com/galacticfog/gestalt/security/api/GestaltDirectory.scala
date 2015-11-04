@@ -3,7 +3,7 @@ package com.galacticfog.gestalt.security.api
 import java.util.UUID
 
 import com.galacticfog.gestalt.security.api.errors.ResourceNotFoundException
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, JsObject, Json}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
@@ -11,7 +11,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 import scala.concurrent.ExecutionContext.Implicits.global
 import errors._
 
-case class GestaltDirectoryCreate(name: String, description: String)
+case class GestaltDirectoryCreate(name: String, description: Option[String], config: Option[JsValue])
 
 case class GestaltDirectory(id: UUID, name: String, description: String, orgId: UUID) extends GestaltResource {
   override val href: String = s"/directories/${id}"

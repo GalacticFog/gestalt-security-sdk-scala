@@ -46,7 +46,7 @@ case class GestaltGroupCreate(name: String)
 
 
 case class GestaltGroupCreateWithRights(name: String,
-                                        rights: Option[Seq[GestaltRightGrant]] = None)
+                                        rights: Option[Seq[GestaltGrantCreate]] = None)
 
 case object GestaltGroup {
   def getGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
