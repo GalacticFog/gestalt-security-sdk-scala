@@ -32,6 +32,18 @@ case class GestaltAccountStoreMappingCreate(name: String,
     this(name, description, storeType = GROUP, accountStoreId = group.id, appId = app.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
 }
 
+case class GestaltOrgAccountStoreMappingCreate(name: String,
+                                               description: String,
+                                               storeType: GestaltAccountStoreType,
+                                               accountStoreId: UUID,
+                                               isDefaultAccountStore: Boolean,
+                                               isDefaultGroupStore: Boolean) {
+  def this(name: String, description: String, dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
+    this(name, description, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
+  def this(name: String, description: String, group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
+    this(name, description, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
+}
+
 case class GestaltAccountStoreMappingUpdate(id: UUID,
                                             name: String,
                                             description: String,
