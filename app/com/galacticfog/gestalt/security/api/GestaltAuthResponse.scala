@@ -1,3 +1,5 @@
 package com.galacticfog.gestalt.security.api
 
-case class GestaltAuthResponse(account: GestaltAccount, rights: Seq[GestaltRightGrant])
+import java.util.UUID
+
+case class GestaltAuthResponse(account: GestaltAccount, groups: Seq[GestaltGroup], rights: Seq[GestaltRightGrant], orgId: UUID)

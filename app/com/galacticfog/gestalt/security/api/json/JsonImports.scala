@@ -1,6 +1,9 @@
 package com.galacticfog.gestalt.security.api.json
 
+import java.util.UUID
+
 import com.galacticfog.gestalt.security.api._
+import com.galacticfog.gestalt.security.api.errors._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
@@ -8,16 +11,32 @@ import play.api.libs.functional.syntax._
 
 object JsonImports {
 
-
   ///////////////////////////////////////////////////////////////////////////
   // Resources
   ///////////////////////////////////////////////////////////////////////////
 
+  val storeTypeReads = new Reads[GestaltAccountStoreType] {
+    override def reads(json: JsValue): JsResult[GestaltAccountStoreType] = json match {
+      case JsString(v) if v.toUpperCase == DIRECTORY.label => JsSuccess(DIRECTORY)
+      case JsString(v) if v.toUpperCase == GROUP.label     => JsSuccess(GROUP)
+      case _ => JsError("invalid GestaltAccountStoreType")
+    }
+  }
+  val storeTypeWrites = new Writes[GestaltAccountStoreType] {
+    override def writes(o: GestaltAccountStoreType): JsValue = JsString(o.label)
+  }
+  implicit val storeTypeFormat = Format[GestaltAccountStoreType](storeTypeReads,storeTypeWrites)
+
+  implicit val linkFormat = Json.format[ResourceLink]
   implicit val orgFormat = Json.format[GestaltOrg]
   implicit val appFormat = Json.format[GestaltApp]
+  implicit val dirFormat = Json.format[GestaltDirectory]
+  implicit val groupFormat = Json.format[GestaltGroup]
   implicit val acctFormat = Json.format[GestaltAccount]
   implicit val grantFormat = Json.format[GestaltRightGrant]
   implicit val authFormat = Json.format[GestaltAuthResponse]
+  implicit val storeMappingFormat = Json.format[GestaltAccountStoreMapping]
+  implicit val syncFormat = Json.format[GestaltOrgSync]
 
   implicit val basicAuthTokenFormat = Json.format[GestaltBasicCredsToken]
 
@@ -48,7 +67,17 @@ object JsonImports {
 
   implicit val accountCredentialsFormat = Format(credentialRead,credentialWrite)
 
+  implicit val rightCreateRequest = Json.format[GestaltGrantCreate]
   implicit val accountCreateRequest = Json.format[GestaltAccountCreate]
+  implicit val accountCreateRequestWithRights = Json.format[GestaltAccountCreateWithRights]
+  implicit val groupCreateRequest = Json.format[GestaltGroupCreate]
+  implicit val groupCreateRequestWithRights = Json.format[GestaltGroupCreateWithRights]
+  implicit val orgAccountStoreMappingCreateRequest = Json.format[GestaltOrgAccountStoreMappingCreate]
+  implicit val accountStoreMappingCreateRequest = Json.format[GestaltAccountStoreMappingCreate]
+  implicit val accountStoreMappingUpdateRequest = Json.format[GestaltAccountStoreMappingUpdate]
+  implicit val appCreateRequest = Json.format[GestaltAppCreate]
+  implicit val orgCreateRequest = Json.format[GestaltOrgCreate]
+  implicit val dirCreateRequest = Json.format[GestaltDirectoryCreate]
 
   implicit val deleteResultFormat = Json.format[DeleteResult]
 
@@ -80,7 +109,7 @@ object JsonImports {
             case 403 => JsSuccess(ForbiddenAPIException(message = message, developerMessage = devMessage))
             case 404 => JsSuccess(ResourceNotFoundException(resource = resource, message = message, developerMessage = devMessage))
             case 409 => JsSuccess(CreateConflictException(resource = resource, message = message, developerMessage = devMessage))
-            case _ => JsSuccess(UnknownAPIException(code = code, resource = resource, message = message, developerMessage = devMessage))
+            case _   => JsSuccess(UnknownAPIException(code = code, resource = resource, message = message, developerMessage = devMessage))
           }
         case None => JsError("expected code: Int")
       }
@@ -88,6 +117,5 @@ object JsonImports {
   }
 
   implicit val exceptionFormat = Format(exceptionReads,exceptionWrites)
-
 
 }

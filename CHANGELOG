@@ -1,3 +1,6 @@
+------ 0.2.0 -------
+- numerous changes for gestalt framework authentication
+
 ------ 0.1.2 -------
 - removed hard-coded resolver for gestalt-framework libraries 
 

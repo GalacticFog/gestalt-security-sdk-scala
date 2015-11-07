@@ -1,5 +1,7 @@
 package com.galacticfog.gestalt.security.api
 
+import java.util.UUID
+
 import com.galacticfog.gestalt.security.api.authorization.{matchesGrant, matchesValue, hasValue, hasGrant}
 import org.junit.runner._
 import org.specs2.mock.Mockito
@@ -9,30 +11,33 @@ import org.specs2.runner._
 @RunWith(classOf[JUnitRunner])
 class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
 
-  def testAccount = GestaltAccount("john", "John", "Doe", "jdoe@gmail.com")
+  def testApp = GestaltApp(id = UUID.randomUUID, name = "testApp", orgId = UUID.randomUUID, isServiceApp = false)
+  def testDir = GestaltDirectory(id = UUID.randomUUID, name = "testDir", description = "test directory", orgId = testApp.orgId)
+  def testAccount = GestaltAccount(id = UUID.randomUUID, "john", "John", "Doe", "jdoe@gmail.com", "850-867-5309", directory = testDir)
 
-  def simpleRight(rightName: String) = Seq(GestaltRightGrant(rightName,None))
+  def genRight(rightName: String, rightValue: Option[String]) = GestaltRightGrant(UUID.randomUUID,rightName,rightValue,appId=testApp.id)
+  def genRight(rightName: String): GestaltRightGrant = genRight(rightName,None)
 
   "hasGrant" should {
 
     "match when solely present with no value" in {
       val grantName = "testGrant"
-      val oneRight = Seq(GestaltRightGrant(grantName, None))
+      val oneRight = Seq(genRight(grantName, None))
       hasGrant(grantName).isAuthorized(testAccount, oneRight) must beTrue
     }
 
     "match when solely present with Some value" in {
       val grantName = "testGrant"
-      val oneRight = Seq(GestaltRightGrant(grantName, Some("value")))
+      val oneRight = Seq(genRight(grantName, Some("value")))
       hasGrant(grantName).isAuthorized(testAccount, oneRight) must beTrue
     }
 
     "match when present amongst others" in {
       val grantName = "testGrant"
       val manyRights = Seq(
-        GestaltRightGrant(grantName, None),
-        GestaltRightGrant("anotherGrant",None),
-        GestaltRightGrant("thirdGrant",None)
+        genRight(grantName, None),
+        genRight("anotherGrant",None),
+        genRight("thirdGrant",None)
       )
       hasGrant(grantName).isAuthorized(testAccount, manyRights) must beTrue
     }
@@ -44,8 +49,8 @@ class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
 
     "not match when not present" in {
       val someRights = Seq(
-        GestaltRightGrant("rightOne", None),
-        GestaltRightGrant("rightTwo", None)
+        genRight("rightOne", None),
+        genRight("rightTwo", None)
       )
       hasGrant("rightWrong").isAuthorized(testAccount, someRights) must beFalse
     }
@@ -55,12 +60,12 @@ class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
   "hasValue" should {
 
     "match when has named value" in {
-      val right = Seq(GestaltRightGrant("foo",Some("bar")))
+      val right = Seq(genRight("foo",Some("bar")))
       hasValue("foo","bar").isAuthorized(testAccount, right) must beTrue
     }
 
     "not match when named value is None" in {
-      val right = Seq(GestaltRightGrant("foo",None))
+      val right = Seq(genRight("foo",None))
       hasValue("foo","bar").isAuthorized(testAccount, right) must beFalse
     }
 
@@ -69,24 +74,24 @@ class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
   "matchesValues" should {
     "match when values matches w.r.t. matcher" in {
       val n = "foo"
-      val right = Seq(GestaltRightGrant(n,Some("BAR")))
+      val right = Seq(genRight(n,Some("BAR")))
       matchesValue(n,"bar"){_ equalsIgnoreCase _}.isAuthorized(testAccount, right) must beTrue
     }
 
     "not match when values don't match w.r.t matcher" in {
       val n = "foo"
       val v = "bar"
-      val right = Seq(GestaltRightGrant(n,Some(v)))
+      val right = Seq(genRight(n,Some(v)))
       matchesValue(n,v){(_,_) => false}.isAuthorized(testAccount, right) must beFalse
     }
 
     "not match when name doesn't match" in {
-      val right = Seq(GestaltRightGrant("foo1",Some("bar")))
+      val right = Seq(genRight("foo1",Some("bar")))
       matchesValue("foo2","bar"){(_,_) => true}.isAuthorized(testAccount, right) must beFalse
     }
 
     "not match when value doesn't exist" in {
-      val right = Seq(GestaltRightGrant("foo",None))
+      val right = Seq(genRight("foo",None))
       matchesValue("foo","bar"){(_,_) => true}.isAuthorized(testAccount, right) must beFalse
     }
   }
@@ -94,7 +99,7 @@ class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
 
   "matchesGrant" should {
 
-    def testGrant(grantName: String, test: String) = matchesGrant(test).isAuthorized(testAccount, simpleRight(grantName))
+    def testGrant(grantName: String, test: String) = matchesGrant(test).isAuthorized(testAccount, Seq(genRight(grantName)))
 
     "match when exact" in {
       "grant"         | "test"        |>

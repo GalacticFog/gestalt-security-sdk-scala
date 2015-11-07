@@ -60,24 +60,25 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     }
 
     "use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
-      await(security.get("/"))
+      await(security.getJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
-      await(security.delete("/"))
+      await(security.deleteJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
-    "use apiKey and apiSecret for authentication on POST" in new FullyMockedWSClient {
-      await(security.post("/"))
+    "use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
+      await(security.postJson("/",apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
-      await(security.post("/",Json.obj()))
+      await(security.postJson("/",Json.obj(),apiKey,apiSecret))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
+
   }
 
 }
