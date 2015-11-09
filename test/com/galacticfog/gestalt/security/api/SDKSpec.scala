@@ -82,7 +82,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
       val route = (POST,url, Action {
-          Unauthorized(Json.toJson(UnauthorizedAPIException("API authentication failed","Authentication of API credentials failed.")))
+          Unauthorized(Json.toJson(UnauthorizedAPIException("resource", "API authentication failed","Authentication of API credentials failed.")))
         })
       implicit val security = getSecurity(route)
       await(testApp.authorizeUser(creds)) must beNone
@@ -132,7 +132,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "properly produce and parse JSON for UnauthorizedAPIException objects" in {
-      val ex = UnauthorizedAPIException("foo","bar")
+      val ex = UnauthorizedAPIException("resource", "foo","bar")
       val json = Json.toJson(ex)
       val ex2 = json.as[SecurityRESTException]
       ex2 must_== ex
@@ -358,7 +358,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.postTryWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, testPassword) returns
         Future{Success(authResponse)}
       security.postTryWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, "wrongPassword") returns
-        Future{Failure(UnauthorizedAPIException("",""))}
+        Future{Failure(UnauthorizedAPIException("","",""))}
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.fqon, testUsername, testPassword) )
       goodResponse must beSome(authResponse)
@@ -376,7 +376,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.postTryWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, testPassword) returns
         Future{Success(authResponse)}
       security.postTryWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, "wrongPassword") returns
-        Future{Failure(UnauthorizedAPIException("",""))}
+        Future{Failure(UnauthorizedAPIException("","",""))}
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, testUsername, testPassword) )
       goodResponse must beSome(authResponse)
@@ -394,7 +394,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.postTryWithAuth[GestaltAuthResponse](s"auth", testKey, testSecret) returns
         Future{Success(authResponse)}
       security.postTryWithAuth[GestaltAuthResponse](s"auth", testKey, "wrongSecret") returns
-        Future{Failure(UnauthorizedAPIException("",""))}
+        Future{Failure(UnauthorizedAPIException("","",""))}
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testKey, testSecret) )
       goodResponse must beSome(authResponse)
