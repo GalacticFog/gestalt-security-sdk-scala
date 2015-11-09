@@ -88,6 +88,14 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testApp.authorizeUser(creds)) must beNone
     }
 
+    "properly fail on NoContent responses" in new TestParameters {
+      val url = baseUrl + "/dummy"
+      val route = (GET,url, Action { NoContent })
+      val security = getSecurity(route)
+      val jsonTry = security.getJson("dummy","","")
+      await(jsonTry) must throwAn[APIParseException]
+    }
+
     "properly produce and parse JSON for UnknownAPIException objects" in {
       val ex = UnknownAPIException(500,"res","foo","bar")
       val json = Json.toJson(ex)

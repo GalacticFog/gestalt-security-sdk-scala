@@ -1,8 +1,8 @@
 package com.galacticfog.gestalt.security.api
 
-import com.galacticfog.gestalt.security.api.errors.{UnknownAPIException, SecurityRESTException}
-import play.api.Application
-import play.api.libs.json.{Json, JsValue}
+import com.galacticfog.gestalt.security.api.errors.{APIParseException, UnknownAPIException, SecurityRESTException}
+import play.api.{Logger, Application}
+import play.api.libs.json.{JsString, Json, JsValue}
 import play.api.libs.ws._
 
 import scala.concurrent.Future
@@ -79,7 +79,21 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
 
   def processResponse(response: WSResponse): Future[JsValue] = {
     response.status match {
-      case x if x >= 200 && x < 300 => Future.successful(response.json)
+      case x if x >= 200 && x < 300 => Future.fromTry {
+        Try {
+          val json = response.json
+          val str = "received json: " + json.toString
+          Logger.debug(str)
+          json
+        } recoverWith {
+          case t: Throwable => Failure(APIParseException(
+            resource = "",
+            message = "could not parse json from response body",
+            devMessage = "Could not parse JSON from response body as expected. This is most likely a bug in the SDK; please report it",
+            json = JsString(response.body)
+          ))
+        }
+      }
       case x if x >= 400 && x < 500 =>
         Try(Json.parse(response.body)) match {
           case Success(json) => json.asOpt[SecurityRESTException] match {
