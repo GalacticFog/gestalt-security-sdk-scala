@@ -487,10 +487,30 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
   }
 
+  "GestaltAccount" should {
+
+    "delete an account by ID" in new TestParameters {
+      val testUsername = "jdoe"
+      val testPassword = "monkey"
+      implicit val security = mock[GestaltSecurityClient]
+      security.delete(s"accounts/${testAccount.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
+      await(GestaltAccount.deleteAccount(testAccount.id, testUsername, testPassword)) must beTrue
+    }
+
+  }
+
   "GestaltApp" should {
 
     "return a sane href" in new TestParameters {
       testApp.href must_== s"/apps/${testApp.id}"
+    }
+
+    "delete an app by ID" in new TestParameters {
+      val testUsername = "jdoe"
+      val testPassword = "monkey"
+      implicit val security = mock[GestaltSecurityClient]
+      security.delete(s"apps/${testApp.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
+      await(GestaltApp.deleteApp(testApp.id, testUsername, testPassword)) must beTrue
     }
 
     "list all accounts" in new TestParameters {

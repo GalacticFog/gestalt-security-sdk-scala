@@ -5,6 +5,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 
 import scala.concurrent.Future
 import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GestaltAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directory: GestaltDirectory) extends GestaltResource {
   override val name: String = username
@@ -18,6 +19,10 @@ case object GestaltAccount {
 
   def getAccounts(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltAccount]]] = {
     client.getTryWithAuth[Seq[GestaltAccount]](s"accounts",username,password)
+  }
+
+  def deleteAccount(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"accounts/${accountId}", username, password) map {_.wasDeleted}
   }
 }
 

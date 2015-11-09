@@ -57,6 +57,10 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 
 case object GestaltApp {
 
+  def deleteApp(appId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"apps/${appId}", username, password) map { _.wasDeleted }
+  }
+
   def authorizeUser(appId: UUID, creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
     client.postTry[GestaltAuthResponse](s"apps/${appId}/auth",creds.toJson) map {
       garTry =>
