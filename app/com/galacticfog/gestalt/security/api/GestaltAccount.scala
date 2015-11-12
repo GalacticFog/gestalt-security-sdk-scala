@@ -2,6 +2,7 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 import com.galacticfog.gestalt.security.api.json.JsonImports._
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -24,6 +25,10 @@ case object GestaltAccount {
   def deleteAccount(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
     client.delete(s"accounts/${accountId}", username, password) map {_.wasDeleted}
   }
+
+  def updateAccount(accountId: UUID, update: GestaltAccountUpdate, username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.patchTryWithAuth[GestaltAccount](s"accounts/${accountId}", Json.toJson(update), username, password) map {_.get}
+  }
 }
 
 case class GestaltAccountCreate(username: String,
@@ -33,6 +38,13 @@ case class GestaltAccountCreate(username: String,
                                 phoneNumber: String,
                                 groups: Option[Seq[UUID]] = None,
                                 credential: GestaltAccountCredential)
+
+case class GestaltAccountUpdate(username: Option[String],
+                                email: Option[String],
+                                phoneNumber: Option[String],
+                                credential: Option[GestaltAccountCredential],
+                                firstName: Option[String],
+                                lastName: Option[String])
 
 case class GestaltAccountCreateWithRights(username: String,
                                           firstName: String,
