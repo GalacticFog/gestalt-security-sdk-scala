@@ -90,7 +90,7 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
         Try {
           val json = response.json
           val str = "received json: " + json.toString
-          Logger.debug(str)
+          Logger.trace(str)
           json
         } recoverWith {
           case t: Throwable => Failure(APIParseException(
