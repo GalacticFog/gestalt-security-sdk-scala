@@ -66,7 +66,7 @@ case object GestaltApp {
       garTry =>
         garTry.toOption
     } recover {
-      case forbidden: ForbiddenAPIException => None
+      case notfound: ResourceNotFoundException => None
     }
   }
 
