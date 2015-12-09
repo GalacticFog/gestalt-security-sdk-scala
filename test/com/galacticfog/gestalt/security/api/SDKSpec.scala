@@ -567,20 +567,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list right grants" in new TestParameters {
-      val testAccountId = UUID.randomUUID()
       val grant1 = GestaltRightGrant(id = UUID.randomUUID, "grant1", None,           appId=testApp.id)
       val grant2 = GestaltRightGrant(id = UUID.randomUUID, "grant2", Some("value2"), appId=testApp.id)
       val testResp = Json.toJson( Seq(grant1,grant2) )
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testAccountId}/rights"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testAccount.username}/rights"
       val route = (GET, url, Action { Ok(testResp) })
       implicit val security = getSecurity(route)
-      val grants = await(testApp.listGrants(testAccountId.toString))
+      val grants = await(testApp.listGrants(testAccount.username))
       grants must beSuccessfulTry(Seq(grant1,grant2))
     }
 
     "list right grants for 404 returns failure" in new TestParameters {
       val testUsername = "someUsersName"
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testUsername}/rights"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("username","resource missing","I have no idea what you're asking for."))) })
       implicit val security = getSecurity(route)
       val grants = await(testApp.listGrants(testUsername))
@@ -589,7 +588,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "list right grants for 400 returns failure" in new TestParameters {
       val testUsername = "someUsersName"
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testUsername}/rights"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { BadRequest(Json.toJson(BadRequestException("username","you did something bad","You've probably done something bad."))) })
       implicit val security = getSecurity(route)
       val grants = await(testApp.listGrants(testUsername))
@@ -667,7 +666,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "delete non-existant right grant" in new TestParameters {
       val testUsername = "someUsersName"
       val testGrantName = "someGrant"
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testUsername}/rights/${testGrantName}"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights/${testGrantName}"
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(false))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testApp.deleteGrant(testUsername,testGrantName))
@@ -679,13 +678,13 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${app1.id}"
       val route = (GET, url, Action { Ok(Json.toJson(app1)) })
       implicit val security = getSecurity(route)
-      val app = await(GestaltApp.getById(app1.id.toString))
+      val app = await(GestaltApp.getById(app1.id))
       app must beSome(app1)
     }
 
     "handle missing app with None" in new TestParameters {
-      val appid = "missing"
-      val url = baseUrl + s"/apps/${appid}"
+      val appid = UUID.randomUUID()
+      val url = baseUrl + s"/apps/${appid.toString}"
       val route = (GET, url, Action {
         NotFound(Json.toJson(ResourceNotFoundException("appId","app not found","Application with specified ID does not exist. Make sure you are using an application ID and not the application name.")))
       })
@@ -727,6 +726,42 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getSecurity(route)
       val testResponse = await(testApp.listAccountStores)
       testResponse must_== Seq(m1,m2)
+    }
+
+    "perform account grant creation" in new TestParameters {
+      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testAccount.id}/rights"
+      val grant = GestaltRightGrant(
+        id = UUID.randomUUID(),
+        grantName = "testGrant",
+        grantValue = None,
+        appId = testApp.id
+      )
+      val create = GestaltGrantCreate(grant.grantName)
+      val route = (POST, url, Action { Ok(Json.toJson(grant)) })
+      implicit val security = getSecurity(route)
+      val testResponse = await(testApp.addAccountGrant(testAccount.id, create))
+      testResponse must_== grant
+    }
+
+    "perform group grant creation" in new TestParameters {
+      val testGroup = GestaltGroup(
+        name = "testGroup",
+        id = UUID.randomUUID(),
+        directoryId = testDir.id,
+        disabled = false
+      )
+      val url = baseUrl + s"/apps/${testApp.id}/groups/${testGroup.id}/rights"
+      val grant = GestaltRightGrant(
+        id = UUID.randomUUID(),
+        grantName = "testGrant",
+        grantValue = None,
+        appId = testApp.id
+      )
+      val create = GestaltGrantCreate(grant.grantName)
+      val route = (POST, url, Action { Ok(Json.toJson(grant)) })
+      implicit val security = getSecurity(route)
+      val testResponse = await(testApp.addGroupGrant(testGroup.id, create))
+      testResponse must_== grant
     }
 
   }
@@ -896,31 +931,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getSecurity(route)
       val failedMapping = await(GestaltAccountStoreMapping.createMapping(createRequest))
       failedMapping must beFailedTry.withThrowable[BadRequestException]
-    }
-
-    "update account store mapping" in new TestParameters {
-      // we don't care about the values, we're just checking that the client makes the right call
-      val updateRequest = GestaltAccountStoreMappingUpdate(
-        id = testMapping.id,
-        name = testMapping.name + "whatever",
-        description = testMapping.description + "whatever",
-        isDefaultAccountStore = !testMapping.isDefaultAccountStore,
-        isDefaultGroupStore = !testMapping.isDefaultGroupStore
-      )
-      val url = baseUrl + s"/accountStoreMappings/${testMapping.id}"
-      val route = (PUT, url, Action { request =>
-        request.body.asJson match {
-          case Some(js) =>
-            // check parsing ability: gestalt-security uses this
-            val u = js.as[GestaltAccountStoreMappingUpdate]
-            if (u == updateRequest) Ok(Json.toJson(testMapping))
-            else BadRequest("did not get the json body I was expecting")
-          case None => BadRequest("was expecting json")
-        }
-      })
-      implicit val security = getSecurity(route)
-      val updated = await(testMapping.update(updateRequest))
-      updated must beSuccessfulTry.withValue(testMapping)
     }
 
   }
