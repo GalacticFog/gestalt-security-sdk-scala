@@ -44,12 +44,6 @@ case class GestaltOrgAccountStoreMappingCreate(name: String,
     this(name, description, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
 }
 
-case class GestaltAccountStoreMappingUpdate(id: UUID,
-                                            name: String,
-                                            description: String,
-                                            isDefaultAccountStore: Boolean,
-                                            isDefaultGroupStore: Boolean)
-
 case class GestaltAccountStoreMapping(id: UUID,
                                       name: String,
                                       description: String,
@@ -61,20 +55,12 @@ case class GestaltAccountStoreMapping(id: UUID,
 
   override val href: String = s"/accountStoreMappings/${id}"
 
-  def update(updateRequest: GestaltAccountStoreMappingUpdate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccountStoreMapping]] = {
-    GestaltAccountStoreMapping.update(id.toString, updateRequest)
-  }
-
   def delete()(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
     GestaltAccountStoreMapping.delete(id.toString)
   }
 }
 
 object GestaltAccountStoreMapping {
-
-  def update(mappingId: String, updateRequest: GestaltAccountStoreMappingUpdate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccountStoreMapping]] = {
-    client.putTry[GestaltAccountStoreMapping](s"accountStoreMappings/${mappingId}",Json.toJson(updateRequest))
-  }
 
   def createMapping(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccountStoreMapping]] = {
     client.postTry[GestaltAccountStoreMapping](s"accountStoreMappings",Json.toJson(createRequest))
