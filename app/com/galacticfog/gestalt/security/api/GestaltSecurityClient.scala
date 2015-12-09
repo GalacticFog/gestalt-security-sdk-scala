@@ -42,6 +42,10 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     postTryWithAuth[T](uri, payload, username = apiKey, password = apiSecret)(fjs)
   }
 
+  def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
+    postTryWithAuth[T](uri, payload, username = apiKey, password = apiSecret)(fjs) map {_.get}
+  }
+
   def putTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
     putJson(uri,payload,username,password) map {
       implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
