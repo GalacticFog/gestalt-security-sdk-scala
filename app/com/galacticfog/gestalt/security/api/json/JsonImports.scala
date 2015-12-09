@@ -75,7 +75,6 @@ object JsonImports {
   implicit val groupCreateRequestWithRights = Json.format[GestaltGroupCreateWithRights]
   implicit val orgAccountStoreMappingCreateRequest = Json.format[GestaltOrgAccountStoreMappingCreate]
   implicit val accountStoreMappingCreateRequest = Json.format[GestaltAccountStoreMappingCreate]
-  implicit val accountStoreMappingUpdateRequest = Json.format[GestaltAccountStoreMappingUpdate]
   implicit val appCreateRequest = Json.format[GestaltAppCreate]
   implicit val orgCreateRequest = Json.format[GestaltOrgCreate]
   implicit val dirCreateRequest = Json.format[GestaltDirectoryCreate]
