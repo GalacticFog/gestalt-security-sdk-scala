@@ -32,7 +32,7 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
 
 case class GestaltOrgSync(accounts: Seq[GestaltAccount], orgs: Seq[GestaltOrg])
 
-case class GestaltOrgCreate(orgName: String, createDefaultUserGroup: Boolean = true)
+case class GestaltOrgCreate(name: String, createDefaultUserGroup: Boolean = true)
 
 case object GestaltOrg {
 
@@ -131,6 +131,14 @@ case object GestaltOrg {
     client.get[GestaltOrg](s"orgs/${orgId}")
       .map { b => Some(b) }
       .recover { case notFound: ResourceNotFoundException => None }
+  }
+
+  def addGrantToAccount(orgId: UUID, accountId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
+    client.post[GestaltRightGrant](s"apps/${orgId}/accounts/${accountId}/rights",Json.toJson(grant))
+  }
+
+  def addGrantToGroup(orgId: UUID, groupId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
+    client.post[GestaltRightGrant](s"apps/${orgId}/groups/${groupId}/rights",Json.toJson(grant))
   }
 }
 

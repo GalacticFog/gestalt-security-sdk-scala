@@ -334,7 +334,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val createRequest = GestaltOrgCreate(testOrg.name)
       implicit val security = mock[GestaltSecurityClient]
       security.postTry[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future{Success{testOrg}}
-      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.orgName))
+      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name))
       newOrg must beSuccessfulTry.withValue(testOrg)
     }
 
@@ -345,7 +345,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val createRequest = GestaltOrgCreate(testOrg.name)
       implicit val security = mock[GestaltSecurityClient]
       security.postTryWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), testUsername, testPassword) returns Future{Success{testOrg}}
-      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.orgName, testUsername, testPassword))
+      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name, testUsername, testPassword))
       newOrg must beSuccessfulTry.withValue(testOrg)
     }
 
