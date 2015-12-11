@@ -633,33 +633,37 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testApp.getGrant(testAccountId.toString, testGrant.grantName)) must throwA[ResourceNotFoundException]
     }
 
-    "add a right grant" in new TestParameters {
+    "add a right grant by username" in new TestParameters {
+      val testUsername = "testusername"
       val testAccountId = UUID.randomUUID
       val createGrant = GestaltRightGrant(id = UUID.randomUUID, "testGrantName", Some("testGrantValue"), appId = testApp.id)
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testAccountId}/rights/${createGrant.grantName}"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights/${createGrant.grantName}"
+      println(url)
       val route = (PUT, url, Action { Created(Json.toJson(createGrant)) })
       implicit val security = getSecurity(route)
-      val newGrant = await(testApp.addGrant(testAccountId.toString,createGrant))
+      val newGrant = await(testApp.addGrant(testUsername,createGrant))
       newGrant must beSuccessfulTry(createGrant)
     }
 
-    "update a right grant" in new TestParameters {
+    "update a right grant by username" in new TestParameters {
+      val testUsername = "testusername"
       val testAccountId = UUID.randomUUID
       val updateGrant = GestaltRightGrant(id = UUID.randomUUID, "testGrantName", Some("testGrantValue"), appId = testApp.id)
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testAccountId}/rights/${updateGrant.grantName}"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights/${updateGrant.grantName}"
       val route = (PUT, url, Action { Ok(Json.toJson(updateGrant)) })
       implicit val security = getSecurity(route)
-      val newGrant = await(testApp.updateGrant(testAccountId.toString,updateGrant))
+      val newGrant = await(testApp.updateGrant(testUsername,updateGrant))
       newGrant must beSuccessfulTry(updateGrant)
     }
 
-    "delete extant right grant" in new TestParameters {
+    "delete extant right grant by username" in new TestParameters {
+      val testUsername = "testusername"
       val testAccountId = UUID.randomUUID
       val testGrantName = "someGrant"
-      val url = baseUrl + s"/apps/${testApp.id}/accounts/${testAccountId}/rights/${testGrantName}"
+      val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights/${testGrantName}"
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(true))) })
       implicit val security = getSecurity(route)
-      val wasDeleted = await(testApp.deleteGrant(testAccountId.toString,testGrantName))
+      val wasDeleted = await(testApp.deleteGrant(testUsername,testGrantName))
       wasDeleted must beSuccessfulTry(true)
     }
 
