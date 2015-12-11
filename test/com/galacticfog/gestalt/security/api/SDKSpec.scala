@@ -228,7 +228,17 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         Ok(Json.toJson(testOrg))
       })
       implicit val security = getSecurity(route)
-      val org: Option[GestaltOrg] = await(GestaltOrg.getById(testOrg.id.toString))
+      val org: Option[GestaltOrg] = await(GestaltOrg.getById(testOrg.id))
+      org must beSome(testOrg)
+    }
+
+    "get an org by FQON" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}"
+      val route = (GET, url, Action {
+        Ok(Json.toJson(testOrg))
+      })
+      implicit val security = getSecurity(route)
+      val org: Option[GestaltOrg] = await(GestaltOrg.getByFQON(testOrg.fqon))
       org must beSome(testOrg)
     }
 
@@ -249,7 +259,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "handle missing org with None" in new TestParameters {
-      val orgId = "missing"
+      val orgId = UUID.randomUUID()
       val url = baseUrl + s"/orgs/${orgId}"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("orgId","org not found","blah blah blah"))) })
       implicit val security = getSecurity(route)
