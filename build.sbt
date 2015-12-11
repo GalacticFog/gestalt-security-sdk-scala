@@ -30,7 +30,7 @@ resolvers ++= {
   } getOrElse(Seq())
 }
 
-libraryDependencies += "com.galacticfog" %% "gestalt-io" % "1.0.1"
+libraryDependencies += "com.galacticfog" %% "gestalt-io" % "1.0.4"
 
 //
 // Adds project name to prompt like in a Play project
