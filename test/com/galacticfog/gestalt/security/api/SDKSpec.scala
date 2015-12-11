@@ -85,7 +85,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
           Unauthorized(Json.toJson(UnauthorizedAPIException("resource", "API authentication failed","Authentication of API credentials failed.")))
         })
       implicit val security = getSecurity(route)
-      await(testApp.authorizeUser(creds)) must beNone
+      await(testApp.authorizeUser(creds)) must throwA[UnauthorizedAPIException]
     }
 
     "properly fail on NoContent responses" in new TestParameters {
@@ -146,8 +146,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
           else BadRequest("")
       })
       val security = getSecurity(route)
-      val deleted = await(security.postTry[DeleteResult]("something"))
-      deleted must beSuccessfulTry(DeleteResult(true))
+      val deleted = await(security.post[DeleteResult]("something"))
+      deleted must_== DeleteResult(true)
     }
 
     "returns UnknownAPIException on weird JSON error responses" in new TestParameters {
@@ -158,8 +158,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         ))
       })
       val security = getSecurity(route)
-      val error: Try[GestaltOrg] = await(security.getTry[GestaltOrg]("something"))
-      error must beFailedTry.withThrowable[UnknownAPIException](".*could not parse to SecurityRESTException.*")
+      await(security.get[GestaltOrg]("something")) must throwA[UnknownAPIException](".*could not parse to SecurityRESTException.*")
     }
 
     "returns UnknownAPIException on non-JSON error responses" in new TestParameters {
@@ -168,8 +167,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         BadRequest("Not JSON")
       })
       val security = getSecurity(route)
-      val error: Try[GestaltOrg] = await(security.getTry[GestaltOrg]("something"))
-      error must beFailedTry.withThrowable[UnknownAPIException](".*could not parse to JSON.*")
+      await(security.get[GestaltOrg]("something")) must throwA[UnknownAPIException](".*could not parse to JSON.*")
     }
 
   }
@@ -238,16 +236,16 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = mock[GestaltSecurityClient]
       val testUsername = "jdoe"
       val testPassword = "monkey"
-      security.deleteTryWithAuth(s"orgs/${testOrg.id}", testUsername, testPassword) returns Future.successful(Success(DeleteResult(true)))
-      val deleted: Try[Boolean] = await(GestaltOrg.deleteOrg(testOrg.id,testUsername,testPassword))
-      deleted must beASuccessfulTry(true)
+      security.delete(s"orgs/${testOrg.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
+      val deleted = await(GestaltOrg.deleteOrg(testOrg.id,testUsername,testPassword))
+      deleted must beTrue
     }
 
     "delete an org by ID" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
-      security.deleteTry(s"orgs/${testOrg.id}") returns Future.successful(Success(DeleteResult(true)))
-      val deleted: Try[Boolean] = await(GestaltOrg.deleteOrg(testOrg.id))
-      deleted must beASuccessfulTry(true)
+      security.delete(s"orgs/${testOrg.id}") returns Future.successful(DeleteResult(true))
+      val deleted = await(GestaltOrg.deleteOrg(testOrg.id))
+      deleted must beTrue
     }
 
     "handle missing org with None" in new TestParameters {
@@ -298,7 +296,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       })
       implicit val security = getSecurity(route)
       val newApp = await(testOrg.createApp(createRequest))
-      newApp must beSuccessfulTry.withValue(testApp)
+      newApp must_== testApp
     }
 
     "list directories" in new TestParameters {
@@ -326,16 +324,16 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       })
       implicit val security = getSecurity(route)
       val dir = await(testOrg.createDirectory(createRequest))
-      dir must beASuccessfulTry(testDir)
+      dir must_== testDir
     }
 
     "create a new org" in new TestParameters {
       val parent = UUID.randomUUID()
       val createRequest = GestaltOrgCreate(testOrg.name)
       implicit val security = mock[GestaltSecurityClient]
-      security.postTry[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future{Success{testOrg}}
+      security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future{testOrg}
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name))
-      newOrg must beSuccessfulTry.withValue(testOrg)
+      newOrg must_== testOrg
     }
 
     "create a new org with auth override" in new TestParameters {
@@ -344,9 +342,9 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val createRequest = GestaltOrgCreate(testOrg.name)
       implicit val security = mock[GestaltSecurityClient]
-      security.postTryWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), testUsername, testPassword) returns Future{Success{testOrg}}
+      security.postWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), testUsername, testPassword) returns Future{testOrg}
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name, testUsername, testPassword))
-      newOrg must beSuccessfulTry.withValue(testOrg)
+      newOrg must_== testOrg
     }
 
     "authenticate framework users against specified org FQON" in new TestParameters {
@@ -355,10 +353,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postTryWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, testPassword) returns
-        Future{Success(authResponse)}
-      security.postTryWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, "wrongPassword") returns
-        Future{Failure(UnauthorizedAPIException("","",""))}
+      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, testPassword) returns
+        Future{authResponse}
+      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, "wrongPassword") returns
+        Future.failed(UnauthorizedAPIException("","",""))
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.fqon, testUsername, testPassword) )
       goodResponse must beSome(authResponse)
@@ -373,10 +371,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postTryWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, testPassword) returns
-        Future{Success(authResponse)}
-      security.postTryWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, "wrongPassword") returns
-        Future{Failure(UnauthorizedAPIException("","",""))}
+      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, testPassword) returns
+        Future{authResponse}
+      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, "wrongPassword") returns
+        Future.failed(UnauthorizedAPIException("","",""))
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, testUsername, testPassword) )
       goodResponse must beSome(authResponse)
@@ -391,10 +389,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testSecret = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postTryWithAuth[GestaltAuthResponse](s"auth", testKey, testSecret) returns
-        Future{Success(authResponse)}
-      security.postTryWithAuth[GestaltAuthResponse](s"auth", testKey, "wrongSecret") returns
-        Future{Failure(UnauthorizedAPIException("","",""))}
+      security.postWithAuth[GestaltAuthResponse](s"auth", testKey, testSecret) returns
+        Future{authResponse}
+      security.postWithAuth[GestaltAuthResponse](s"auth", testKey, "wrongSecret") returns
+        Future.failed(UnauthorizedAPIException("","",""))
 
       val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testKey, testSecret) )
       goodResponse must beSome(authResponse)
@@ -421,12 +419,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         credential = GestaltPasswordCredential("joe's password")
       )
 
-      security.postTryWithAuth[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create), testUsername, testPassword) returns
-        Future{Success(testAccount)}
+      security.postWithAuth[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create), testUsername, testPassword) returns
+        Future{testAccount}
 
-      val newAccount: Try[GestaltAccount] = await(GestaltOrg.createAccount(testOrg.id, create, testUsername, testPassword))
+      val newAccount = await(GestaltOrg.createAccount(testOrg.id, create, testUsername, testPassword))
 
-      newAccount must beSuccessfulTry(testAccount)
+      newAccount must_== testAccount
     }
 
     "add user with groups to an org" in new TestParameters {
@@ -445,12 +443,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         credential = GestaltPasswordCredential("joe's password")
       )
 
-      security.postTry[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create)) returns
-        Future{Success(testAccount)}
+      security.post[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create)) returns
+        Future{testAccount}
 
-      val newAccount: Try[GestaltAccount] = await(GestaltOrg.createAccount(testOrg.id, create))
+      val newAccount = await(GestaltOrg.createAccount(testOrg.id, create))
 
-      newAccount must beSuccessfulTry(testAccount)
+      newAccount must_== testAccount
     }
 
     "add group to an org" in new TestParameters {
@@ -464,12 +462,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
-      security.postTry[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create)) returns
-        Future{Success(testGroup)}
+      security.post[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create)) returns
+        Future{testGroup}
 
-      val newGroup: Try[GestaltGroup] = await(GestaltOrg.createGroup(testOrg.id, create))
+      val newGroup = await(GestaltOrg.createGroup(testOrg.id, create))
 
-      newGroup must beSuccessfulTry(testGroup)
+      newGroup must_== testGroup
     }
 
     "add group to an org with auth override" in new TestParameters {
@@ -485,12 +483,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
-      security.postTryWithAuth[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create), testUsername, testPassword) returns
-        Future{Success(testGroup)}
+      security.postWithAuth[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create), testUsername, testPassword) returns
+        Future{testGroup}
 
-      val newGroup: Try[GestaltGroup] = await(GestaltOrg.createGroup(testOrg.id, create, testUsername, testPassword))
+      val newGroup = await(GestaltOrg.createGroup(testOrg.id, create, testUsername, testPassword))
 
-      newGroup must beSuccessfulTry(testGroup)
+      newGroup must_== testGroup
     }
 
   }
@@ -563,7 +561,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       })
       implicit val security = getSecurity(route)
       val newAccount = await(testApp.createAccount(createRequest))
-      newAccount must beSuccessfulTry.withValue(testAccount)
+      newAccount must_== testAccount
     }
 
     "list right grants" in new TestParameters {
@@ -574,7 +572,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (GET, url, Action { Ok(testResp) })
       implicit val security = getSecurity(route)
       val grants = await(testApp.listGrants(testAccount.username))
-      grants must beSuccessfulTry(Seq(grant1,grant2))
+      grants must_== Seq(grant1,grant2)
     }
 
     "list right grants for 404 returns failure" in new TestParameters {
@@ -582,8 +580,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("username","resource missing","I have no idea what you're asking for."))) })
       implicit val security = getSecurity(route)
-      val grants = await(testApp.listGrants(testUsername))
-      grants must beFailedTry.withThrowable[ResourceNotFoundException]
+      await(testApp.listGrants(testUsername)) must throwA[ResourceNotFoundException]
     }
 
     "list right grants for 400 returns failure" in new TestParameters {
@@ -591,8 +588,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { BadRequest(Json.toJson(BadRequestException("username","you did something bad","You've probably done something bad."))) })
       implicit val security = getSecurity(route)
-      val grants = await(testApp.listGrants(testUsername))
-      grants must beFailedTry.withThrowable[BadRequestException]
+      await(testApp.listGrants(testUsername)) must throwA[BadRequestException]
     }
 
     "get a right grant by name" in new TestParameters {
@@ -638,11 +634,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testAccountId = UUID.randomUUID
       val createGrant = GestaltRightGrant(id = UUID.randomUUID, "testGrantName", Some("testGrantValue"), appId = testApp.id)
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights/${createGrant.grantName}"
-      println(url)
       val route = (PUT, url, Action { Created(Json.toJson(createGrant)) })
       implicit val security = getSecurity(route)
       val newGrant = await(testApp.addGrant(testUsername,createGrant))
-      newGrant must beSuccessfulTry(createGrant)
+      newGrant must_== createGrant
     }
 
     "update a right grant by username" in new TestParameters {
@@ -653,7 +648,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (PUT, url, Action { Ok(Json.toJson(updateGrant)) })
       implicit val security = getSecurity(route)
       val newGrant = await(testApp.updateGrant(testUsername,updateGrant))
-      newGrant must beSuccessfulTry(updateGrant)
+      newGrant must_== updateGrant
     }
 
     "delete extant right grant by username" in new TestParameters {
@@ -664,7 +659,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(true))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testApp.deleteGrant(testUsername,testGrantName))
-      wasDeleted must beSuccessfulTry(true)
+      wasDeleted must_== true
     }
 
     "delete non-existant right grant" in new TestParameters {
@@ -674,7 +669,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(false))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testApp.deleteGrant(testUsername,testGrantName))
-      wasDeleted must beSuccessfulTry(false)
+      wasDeleted must_== false
     }
 
     "get an app by ID" in new TestParameters {
@@ -711,11 +706,21 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       testResponse must beSome(authResponse)
     }
 
-    "handle failed user authentication with a None" in new TestParameters {
+    "throw on unexpected user authentication" in new TestParameters {
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
       val route = (POST, url, Action {
         Forbidden(Json.toJson(ForbiddenAPIException("account authentication failed","Authentication of application account failed due to invalid account credentials.")))
+      })
+      implicit val security = getSecurity(route)
+      await(testApp.authorizeUser(creds)) must throwA[ForbiddenAPIException]
+    }
+
+    "handle failed user authentication with a None" in new TestParameters {
+      val creds = GestaltBasicCredsToken("jdoe","monkey")
+      val url = baseUrl + s"/apps/${testApp.id}/auth"
+      val route = (POST, url, Action {
+        NotFound(Json.toJson(ResourceNotFoundException("","account authentication failed","Authentication of application account failed due to invalid account credentials.")))
       })
       implicit val security = getSecurity(route)
       val testResponse = await(testApp.authorizeUser(creds))
@@ -800,7 +805,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       })
       implicit val security = getSecurity(route)
       val newUser = await(testDir.createAccount(createRequest))
-      newUser must beSuccessfulTry.withValue(testAccount)
+      newUser must_== testAccount
     }
 
     "list directory accounts" in new TestParameters {
@@ -830,8 +835,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         BadRequest(Json.toJson(BadRequestException("username", "some message", "some developer message")))
       })
       implicit val security = getSecurity(route)
-      val failedUser = await(testDir.createAccount(createRequest))
-      failedUser must beFailedTry.withThrowable[BadRequestException]
+      await(testDir.createAccount(createRequest)) must throwA[BadRequestException]
     }
 
     "get a directory by ID" in new TestParameters {
@@ -881,7 +885,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(true))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testMapping.delete())
-      wasDeleted must beSuccessfulTry(true)
+      wasDeleted must_== true
     }
 
     "delete non-existant mapping" in new TestParameters {
@@ -889,7 +893,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(false))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testMapping.delete())
-      wasDeleted must beSuccessfulTry(false)
+      wasDeleted must_== false
     }
 
     "create an account store mapping" in new TestParameters {
@@ -915,7 +919,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       })
       implicit val security = getSecurity(route)
       val newMapping = await(GestaltAccountStoreMapping.createMapping(createRequest))
-      newMapping must beSuccessfulTry(testMapping)
+      newMapping must_== testMapping
     }
 
     "create account store mapping failure returns failed try" in new TestParameters {
@@ -933,8 +937,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         BadRequest(Json.toJson(BadRequestException("accountStoreMappings","some message","some developer message")))
       })
       implicit val security = getSecurity(route)
-      val failedMapping = await(GestaltAccountStoreMapping.createMapping(createRequest))
-      failedMapping must beFailedTry.withThrowable[BadRequestException]
+      await(GestaltAccountStoreMapping.createMapping(createRequest)) must throwA[BadRequestException]
     }
 
   }

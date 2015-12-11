@@ -2,7 +2,8 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 
-import com.galacticfog.gestalt.security.api.errors.{ResourceNotFoundException, ForbiddenAPIException}
+import com.galacticfog.gestalt.security.api.errors.{UnauthorizedAPIException, ResourceNotFoundException, ForbiddenAPIException}
+import play.api.Logger
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
@@ -24,19 +25,19 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
     GestaltApp.listAccounts(id)
   }
 
-  def addGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
+  def addGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     GestaltApp.addGrant(id, username, grant)
   }
 
-  def updateGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
+  def updateGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     GestaltApp.updateGrant(id, username, grant)
   }
 
-  def deleteGrant(username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
+  def deleteGrant(username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
     GestaltApp.deleteGrant(id, username, grantName)
   }
 
-  def listGrants(username: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltRightGrant]]] = {
+  def listGrants(username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
     GestaltApp.listGrants(id, username)
   }
 
@@ -44,7 +45,7 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
     GestaltApp.authorizeUser(id,creds)
   }
 
-  def createAccount(create: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
+  def createAccount(create: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     GestaltApp.createAccount(id, create)
   }
 
@@ -75,11 +76,14 @@ case object GestaltApp {
   }
 
   def authorizeUser(appId: UUID, creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postTry[GestaltAuthResponse](s"apps/${appId}/auth",creds.toJson) map {
-      garTry =>
-        garTry.toOption
-    } recover {
-      case notfound: ResourceNotFoundException => None
+    client.post[GestaltAuthResponse](s"apps/${appId}/auth",creds.toJson) map {Some(_)} recoverWith {
+      case notfound: ResourceNotFoundException => Future.successful(None)
+      case authc: UnauthorizedAPIException =>
+        Logger.warn("GestaltApp.authorizeUser(): caught UnauthorziedAPIException; this is likely because the GestaltSecurityClient is misconfigured with invalid credentials.")
+        Future.failed(authc)
+      case authz: ForbiddenAPIException =>
+        Logger.warn("GestaltApp.authorizeUser(): caught ForbiddenAPIException; the credentials provided ot the GestaltSecurityClient do not have appropriate permissions for authorizing users against this application.")
+        Future.failed(authz)
     }
   }
 
@@ -99,8 +103,8 @@ case object GestaltApp {
     client.get[Seq[GestaltAccount]](s"apps/${appId}/accounts")
   }
 
-  def createAccount(appId: UUID, create: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
-    client.postTry[GestaltAccount](s"apps/${appId}/accounts",Json.toJson(create))
+  def createAccount(appId: UUID, create: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.post[GestaltAccount](s"apps/${appId}/accounts",Json.toJson(create))
   }
 
   def getById(appId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
@@ -120,24 +124,19 @@ case object GestaltApp {
     client.post[GestaltRightGrant](s"apps/${appId}/groups/${groupId}/rights",Json.toJson(grant))
   }
 
-
-  def deleteGrant(appId: UUID, username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
-    client.deleteTry(s"apps/${appId}/usernames/${username}/rights/${grantName}") map {
-      _.map {
-        _.wasDeleted
-      }
-    }
+  def deleteGrant(appId: UUID, username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"apps/${appId}/usernames/${username}/rights/${grantName}") map {_.wasDeleted}
   }
 
-  def listGrants(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltRightGrant]]] = {
-    client.getTry[Seq[GestaltRightGrant]](s"apps/${appId}/usernames/${username}/rights")
+  def listGrants(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    client.get[Seq[GestaltRightGrant]](s"apps/${appId}/usernames/${username}/rights")
   }
 
-  def addGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
-    client.putTry[GestaltRightGrant](s"apps/${appId}/usernames/${username}/rights/${grant.grantName}",Json.toJson(grant))
+  def addGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
+    client.put[GestaltRightGrant](s"apps/${appId}/usernames/${username}/rights/${grant.grantName}",Json.toJson(grant))
   }
 
-  def updateGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[Try[GestaltRightGrant]] = {
+  def updateGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     addGrant(appId, username, grant)
   }
 }

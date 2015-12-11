@@ -1,8 +1,8 @@
 package com.galacticfog.gestalt.security.api
 
-import com.galacticfog.gestalt.security.api.errors.{APIParseException, UnknownAPIException, SecurityRESTException}
+import com.galacticfog.gestalt.security.api.errors.{BadRequestException, APIParseException, UnknownAPIException, SecurityRESTException}
 import play.api.{Logger, Application}
-import play.api.libs.json.{JsString, Json, JsValue}
+import play.api.libs.json._
 import play.api.libs.ws._
 
 import scala.concurrent.Future
@@ -15,77 +15,60 @@ case class DeleteResult(wasDeleted: Boolean)
 
 class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val hostname: String, val port: Int, val apiKey: String, val apiSecret: String) {
 
-
-  def postTryWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    postJson(uri, username, password) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def validate[T](json: JsValue)(implicit m: reflect.Manifest[T], rds: Reads[T]): T = {
+    json.validate[T] match {
+      case s: JsSuccess[T] => s.get
+      case e: JsError => throw new APIParseException(
+        resource = "",
+        message = "invalid payload",
+        devMessage = s"Error parsing a successful API response; was expecting JSON representation of SDK object ${m.toString}. Likely culprit is a version mismatch between the client and the API. Please contact the developers.",
+        json = json
+      )
+    }
   }
 
-  def patchTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    patchJson(uri, payload, username, password) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def patchWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    patchJson(uri, payload, username, password) map validate[T]
   }
 
-  def postTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    postJson(uri, payload, username, password) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def postWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postJson(uri, payload, username, password) map validate[T]
   }
 
-  def postTry[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    postTryWithAuth[T](uri, username = apiKey, password = apiSecret)
+  def postWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postJson(uri, username, password) map validate[T]
   }
 
-  def postTry[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    postTryWithAuth[T](uri, payload, username = apiKey, password = apiSecret)(fjs)
+  def post[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postWithAuth[T](uri = uri, username = apiKey, password = apiSecret)
   }
 
-  def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
-    postTryWithAuth[T](uri, payload, username = apiKey, password = apiSecret)(fjs) map {_.get}
+  def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postJson(uri, payload, username = apiKey, password = apiSecret) map validate[T]
   }
 
-  def putTryWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    putJson(uri,payload,username,password) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def putWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    putJson(uri,payload,username,password) map validate[T]
   }
 
-  def putTry[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    putTryWithAuth[T](uri, payload, apiKey, apiSecret)
+  def put[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    putWithAuth[T](uri, payload, apiKey, apiSecret)
   }
 
-  def getTryWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    getJson(uri,username,password) map {
-      implicit json => Try{json.as[T]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def getWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    getJson(uri,username,password) map validate[T]
   }
 
-  def getWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
-    getTryWithAuth[T](uri,username,password) map {_.get}
-  }
-
-  def getTry[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[Try[T]] = {
-    getTryWithAuth[T](uri, apiKey, apiSecret)
-  }
-
-  def deleteTry(uri: String): Future[Try[DeleteResult]] = {
-    deleteTryWithAuth(uri, apiKey, apiSecret)
-  }
-
-  def deleteTryWithAuth(uri: String, username: String, password: String): Future[Try[DeleteResult]] = {
-    deleteJson(uri, username, password) map {
-      implicit json => Try{json.as[DeleteResult]} recoverWith errors.handleParsingErrorAsFailure
-    } recover errors.convertToFailure
+  def delete(uri: String): Future[DeleteResult] = {
+    delete(uri, apiKey, apiSecret)
   }
 
   def delete(uri: String, username: String, password: String): Future[DeleteResult] = {
-    deleteTryWithAuth(uri, username, password) map {_.get}
+    deleteJson(uri, username, password) map validate[DeleteResult]
   }
 
-  def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T]): Future[T] = {
-    getTry[T](uri) map {_.get}
+  def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    getJson(uri, username = apiKey, password = apiSecret) map validate[T]
   }
 
   def processResponse(response: WSResponse): Future[JsValue] = {

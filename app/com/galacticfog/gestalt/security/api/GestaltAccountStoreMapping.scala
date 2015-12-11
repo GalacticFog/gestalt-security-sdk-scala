@@ -55,23 +55,19 @@ case class GestaltAccountStoreMapping(id: UUID,
 
   override val href: String = s"/accountStoreMappings/${id}"
 
-  def delete()(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
+  def delete()(implicit client: GestaltSecurityClient): Future[Boolean] = {
     GestaltAccountStoreMapping.delete(id.toString)
   }
 }
 
 object GestaltAccountStoreMapping {
 
-  def createMapping(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccountStoreMapping]] = {
-    client.postTry[GestaltAccountStoreMapping](s"accountStoreMappings",Json.toJson(createRequest))
+  def createMapping(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
+    client.post[GestaltAccountStoreMapping](s"accountStoreMappings",Json.toJson(createRequest))
   }
 
-  def delete(mappingId: String)(implicit client: GestaltSecurityClient): Future[Try[Boolean]] = {
-    client.deleteTry(s"accountStoreMappings/${mappingId}") map {
-      _.map {
-        _.wasDeleted
-      }
-    }
+  def delete(mappingId: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"accountStoreMappings/${mappingId}") map {_.wasDeleted}
   }
 
   def getById(mappingId: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccountStoreMapping]] = {

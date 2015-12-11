@@ -14,12 +14,12 @@ case class GestaltAccount(id: UUID, username: String, firstName: String, lastNam
 }
 
 case object GestaltAccount {
-  def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
-    client.getTryWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)
+  def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)
   }
 
-  def getAccounts(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltAccount]]] = {
-    client.getTryWithAuth[Seq[GestaltAccount]](s"accounts",username,password)
+  def getAccounts(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    client.getWithAuth[Seq[GestaltAccount]](s"accounts",username,password)
   }
 
   def deleteAccount(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
@@ -27,7 +27,7 @@ case object GestaltAccount {
   }
 
   def updateAccount(accountId: UUID, update: GestaltAccountUpdate, username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.patchTryWithAuth[GestaltAccount](s"accounts/${accountId}", Json.toJson(update), username, password) map {_.get}
+    client.patchWithAuth[GestaltAccount](s"accounts/${accountId}", Json.toJson(update), username, password)
   }
 }
 
@@ -66,7 +66,7 @@ case class GestaltGroupCreateWithRights(name: String,
                                         rights: Option[Seq[GestaltGrantCreate]] = None)
 
 case object GestaltGroup {
-  def getGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Try[Seq[GestaltGroup]]] = {
-    client.getTryWithAuth[Seq[GestaltGroup]]("groups",username,password)
+  def getGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getWithAuth[Seq[GestaltGroup]]("groups",username,password)
   }
 }

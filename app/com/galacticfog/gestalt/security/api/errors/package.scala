@@ -32,4 +32,13 @@ package object errors {
     case e: Throwable => Failure(e)
   }
 
+  def convertToAPIException[U <: GestaltResource](e: Throwable)(implicit json: JsValue, t: reflect.Manifest[U]): Future[U] = {
+    Future.failed[U](UnknownAPIException(
+      code = 0,
+      resource = "unknown",
+      message = e.getMessage,
+      developerMessage = "Received exception: " + e.getMessage + ", likely while parsing " + t.toString() + " from JSON response: " + json.toString()
+    ))
+  }
+
 }

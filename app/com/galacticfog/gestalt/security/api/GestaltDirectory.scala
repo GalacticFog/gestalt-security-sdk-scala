@@ -16,7 +16,7 @@ case class GestaltDirectoryCreate(name: String, description: Option[String], con
 case class GestaltDirectory(id: UUID, name: String, description: String, orgId: UUID) extends GestaltResource {
   override val href: String = s"/directories/${id}"
 
-  def createAccount(create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
+  def createAccount(create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     GestaltDirectory.createAccount(id.toString, create)
   }
 
@@ -40,8 +40,8 @@ object GestaltDirectory {
     client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts")
   }
 
-  def createAccount(directoryId: String, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[Try[GestaltAccount]] = {
-    client.postTry[GestaltAccount](s"directories/${directoryId}/accounts",Json.toJson(create))
+  def createAccount(directoryId: String, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.post[GestaltAccount](s"directories/${directoryId}/accounts",Json.toJson(create))
   }
 
 
