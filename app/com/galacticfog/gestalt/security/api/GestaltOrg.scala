@@ -114,6 +114,10 @@ case object GestaltOrg {
     client.get[GestaltOrg]("orgs/current")
   }
 
+  def getCurrentOrg(username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
+    client.getWithAuth[GestaltOrg]("orgs/current", username, password)
+  }
+
   def getDirectories(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = {
     client.get[Seq[GestaltDirectory]](s"orgs/${orgId}/directories") 
   }
@@ -128,6 +132,20 @@ case object GestaltOrg {
   def getByFQON(fqon: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
     // different semantics for this one
     client.get[GestaltOrg](s"${fqon}")
+      .map { b => Some(b) }
+      .recover { case notFound: ResourceNotFoundException => None }
+  }
+
+  def getById(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
+    // different semantics for this one
+    client.getWithAuth[GestaltOrg](s"orgs/${orgId}", username = username, password = password)
+      .map { b => Some(b) }
+      .recover { case notFound: ResourceNotFoundException => None }
+  }
+
+  def getByFQON(fqon: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
+    // different semantics for this one
+    client.getWithAuth[GestaltOrg](s"${fqon}", username = username, password = password)
       .map { b => Some(b) }
       .recover { case notFound: ResourceNotFoundException => None }
   }
