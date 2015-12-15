@@ -20,10 +20,22 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
     GestaltDirectory.createAccount(id.toString, create)
   }
 
+  @deprecated("use listAccounts", since = "2.0.0")
   def getAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    GestaltDirectory.getAccounts(id.toString)
+    listAccounts()
   }
 
+  def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    GestaltDirectory.listAccounts(id.toString)
+  }
+
+  def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltDirectory.listGroups(id.toString)
+  }
+
+  def listGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltDirectory.listGroups(id.toString, username, password)
+  }
 }
 
 object GestaltDirectory {
@@ -36,13 +48,25 @@ object GestaltDirectory {
     }
   }
 
+  @deprecated("use listAccounts", since = "2.0.0")
   def getAccounts(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    listAccounts(directoryId)(client)
+  }
+
+  def listAccounts(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts")
+  }
+
+  def listGroups(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups")
+  }
+
+  def listGroups(directoryId: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getWithAuth[Seq[GestaltGroup]](s"directories/${directoryId}/groups",username, password)
   }
 
   def createAccount(directoryId: String, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"directories/${directoryId}/accounts",Json.toJson(create))
   }
-
 
 }

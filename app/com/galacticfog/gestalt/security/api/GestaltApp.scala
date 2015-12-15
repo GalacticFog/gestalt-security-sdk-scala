@@ -10,8 +10,6 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.galacticfog.gestalt.security.api.json.JsonImports._
 
-import scala.util.Try
-
 case class GestaltAppCreate(name: String)
 
 case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean) extends GestaltResource {
@@ -23,6 +21,10 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     GestaltApp.listAccounts(id)
+  }
+
+  def getAccountByUsername(username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+    GestaltApp.getAccountByUsername(id, username)
   }
 
   def addGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
@@ -39,6 +41,10 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 
   def listGrants(username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
     GestaltApp.listGrants(id, username)
+  }
+
+  def listGrants(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    GestaltApp.listGrants(id, accountId)
   }
 
   def authorizeUser(creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
@@ -70,6 +76,10 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 }
 
 case object GestaltApp {
+
+  def getAccountByUsername(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+    client.getOpt[GestaltAccount](s"apps/${appId}/usernames/${username}")
+  }
 
   def deleteApp(appId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
     client.delete(s"apps/${appId}", username, password) map { _.wasDeleted }
@@ -108,12 +118,7 @@ case object GestaltApp {
   }
 
   def getById(appId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
-    // different semantics for this one
-    client.get[GestaltApp](s"apps/${appId}") map {
-      b => Some(b)
-    } recover {
-      case notFound: ResourceNotFoundException => None
-    }
+    client.getOpt[GestaltApp](s"apps/${appId}")
   }
 
   def addGrantToAccount(appId: UUID, accountId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
@@ -130,6 +135,10 @@ case object GestaltApp {
 
   def listGrants(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
     client.get[Seq[GestaltRightGrant]](s"apps/${appId}/usernames/${username}/rights")
+  }
+
+  def listGrants(appId: UUID, accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    client.get[Seq[GestaltRightGrant]](s"apps/${appId}/accounts/${accountId}/rights")
   }
 
   def addGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {

@@ -1,6 +1,6 @@
 package com.galacticfog.gestalt.security.api
 
-import com.galacticfog.gestalt.security.api.errors.{BadRequestException, APIParseException, UnknownAPIException, SecurityRESTException}
+import com.galacticfog.gestalt.security.api.errors._
 import play.api.{Logger, Application}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -69,6 +69,22 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
 
   def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
     getJson(uri, username = apiKey, password = apiSecret) map validate[T]
+  }
+
+  def getOpt[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[Option[T]] = {
+    getJson(uri, username = apiKey, password = apiSecret) map {
+      j => Some(validate[T](j))
+    } recover {
+      case notFound: ResourceNotFoundException => None
+    }
+  }
+
+  def getOptWithAuth[T](uri: String, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[Option[T]] = {
+    getJson(uri, username = username, password = password) map {
+      j => Some(validate[T](j))
+    } recover {
+      case notFound: ResourceNotFoundException => None
+    }
   }
 
   def processResponse(response: WSResponse): Future[JsValue] = {

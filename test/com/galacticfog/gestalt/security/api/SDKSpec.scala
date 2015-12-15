@@ -274,7 +274,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/orgs/${testOrg.id}/apps"
       val route = (GET, url, Action { Ok(testResp) })
       implicit val security = getSecurity(route)
-      val apps = await(testOrg.getApps)
+      val apps = await(testOrg.listApps)
       apps must haveSize(2)
       apps must contain(app1)
       apps must contain(app2)
@@ -316,7 +316,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/orgs/${testOrg.id}/directories"
       val route = (GET, url, Action { Ok(testResp) })
       implicit val security = getSecurity(route)
-      val apps = await(testOrg.getDirectories())
+      val apps = await(testOrg.listDirectories)
       apps must_== Seq(dir1,dir2)
     }
 
@@ -827,7 +827,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         Ok(testResp)
       })
       implicit val security = getSecurity(route)
-      val apps = await(testDir.getAccounts())
+      val apps = await(testDir.listAccounts)
       apps must_== Seq(acc1, acc2)
     }
 
