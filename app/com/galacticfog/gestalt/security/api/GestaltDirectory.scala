@@ -17,7 +17,7 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
   override val href: String = s"/directories/${id}"
 
   def createAccount(create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    GestaltDirectory.createAccount(id.toString, create)
+    GestaltDirectory.createAccount(id, create)
   }
 
   @deprecated("use listAccounts", since = "2.0.0")
@@ -26,20 +26,23 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
   }
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    GestaltDirectory.listAccounts(id.toString)
+    GestaltDirectory.listAccounts(id)
   }
 
   def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    GestaltDirectory.listGroups(id.toString)
+    GestaltDirectory.listGroups(id)
   }
 
   def listGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    GestaltDirectory.listGroups(id.toString, username, password)
+    GestaltDirectory.listGroups(id, username, password)
   }
+
 }
 
 object GestaltDirectory {
-  def getById(dirId: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltDirectory]] = {
+
+
+  def getById(dirId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltDirectory]] = {
     // different semantics for this one
     client.get[GestaltDirectory](s"directories/${dirId}") map {
       b => Some(b)
@@ -49,23 +52,23 @@ object GestaltDirectory {
   }
 
   @deprecated("use listAccounts", since = "2.0.0")
-  def getAccounts(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+  def getAccounts(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     listAccounts(directoryId)(client)
   }
 
-  def listAccounts(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+  def listAccounts(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts")
   }
 
-  def listGroups(directoryId: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+  def listGroups(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups")
   }
 
-  def listGroups(directoryId: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+  def listGroups(directoryId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.getWithAuth[Seq[GestaltGroup]](s"directories/${directoryId}/groups",username, password)
   }
 
-  def createAccount(directoryId: String, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+  def createAccount(directoryId: UUID, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"directories/${directoryId}/accounts",Json.toJson(create))
   }
 

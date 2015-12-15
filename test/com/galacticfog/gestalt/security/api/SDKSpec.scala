@@ -852,12 +852,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/directories/${testDir.id}"
       val route = (GET, url, Action { Ok(Json.toJson(testDir)) })
       implicit val security = getSecurity(route)
-      val dir = await(GestaltDirectory.getById(testDir.id.toString))
+      val dir = await(GestaltDirectory.getById(testDir.id))
       dir must beSome(testDir)
     }
 
     "handle missing directory with None" in new TestParameters {
-      val dirId = "missing"
+      val dirId = UUID.randomUUID()
       val url = baseUrl + s"/directories/${dirId}"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("dirId","dir not found","blah blah blah"))) })
       implicit val security = getSecurity(route)
