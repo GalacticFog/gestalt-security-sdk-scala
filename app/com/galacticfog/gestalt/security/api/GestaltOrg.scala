@@ -36,11 +36,21 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
     GestaltOrg.getAccountById(id, accountId)
   }
 
+  def getGroupByGroupnme(groupname: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    GestaltOrg.getGroupByUsername(id, groupname)
+  }
+
+  def getGroupById(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    GestaltOrg.getGroupById(id, groupId)
+  }
+
   def getServiceApp()(implicit client: GestaltSecurityClient): Future[GestaltApp] = {
     GestaltOrg.getServiceApp(id)
   }
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = GestaltOrg.listAccounts(id)
+
+  def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = GestaltOrg.listGroups(id)
 
   @deprecated("use listDirectories","2.0.0")
   def getDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = GestaltOrg.listDirectories(id)
@@ -64,6 +74,8 @@ case class GestaltOrgCreate(name: String, createDefaultUserGroup: Option[Boolean
 case class GestaltOrgUpdate(name: String)
 
 case object GestaltOrg {
+  def getGroupById(orgId: UUID, groupId: UUID): Future[Option[GestaltGroup]] = ???
+
 
   def getAccountByUsername(orgId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
     client.getOpt[GestaltAccount](s"orgs/${orgId}/usernames/${username}")
@@ -188,6 +200,10 @@ case object GestaltOrg {
 
   def listAccounts(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     client.get[Seq[GestaltAccount]](s"orgs/${orgId}/accounts")
+  }
+
+  def listGroups(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"orgs/${orgId}/groups")
   }
 
   def getById(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {

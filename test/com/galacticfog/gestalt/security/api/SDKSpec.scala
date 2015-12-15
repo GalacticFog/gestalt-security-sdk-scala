@@ -870,20 +870,20 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
   "GestaltAccountStoreMapping" should {
 
     "return a sane href" in new TestParameters {
-      testMapping.href must_== s"/accountStoreMappings/${testMapping.id}"
+      testMapping.href must_== s"/accountStores/${testMapping.id}"
     }
 
     "get an account store mapping by ID" in new TestParameters {
-      val url = baseUrl + s"/accountStoreMappings/${testMapping.id}"
+      val url = baseUrl + s"/accountStores/${testMapping.id}"
       val route = (GET, url, Action { Ok(Json.toJson(testMapping)) })
       implicit val security = getSecurity(route)
-      val asm = await(GestaltAccountStoreMapping.getById(testMapping.id.toString))
+      val asm = await(GestaltAccountStoreMapping.getById(testMapping.id))
       asm must beSome(testMapping)
     }
 
     "handle missing mapping with None" in new TestParameters {
-      val badId = "badMappingId"
-      val url = baseUrl + s"/accountStoreMappings/${badId}"
+      val badId = UUID.randomUUID()
+      val url = baseUrl + s"/accountStores/${badId}"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("accountStoreMapping","mapping not found","blah blah blah"))) })
       implicit val security = getSecurity(route)
       val asm = await(GestaltAccountStoreMapping.getById(badId))
@@ -891,7 +891,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "delete extant mapping" in new TestParameters {
-      val url = baseUrl + s"/accountStoreMappings/${testMapping.id}"
+      val url = baseUrl + s"/accountStores/${testMapping.id}"
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(true))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testMapping.delete())
@@ -899,7 +899,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "delete non-existant mapping" in new TestParameters {
-      val url = baseUrl + s"/accountStoreMappings/${testMapping.id}"
+      val url = baseUrl + s"/accountStores/${testMapping.id}"
       val route = (DELETE, url, Action { Ok(Json.toJson(DeleteResult(false))) })
       implicit val security = getSecurity(route)
       val wasDeleted = await(testMapping.delete())
@@ -916,7 +916,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         isDefaultAccountStore = testMapping.isDefaultAccountStore,
         isDefaultGroupStore = testMapping.isDefaultGroupStore
       )
-      val url = baseUrl + "/accountStoreMappings"
+      val url = baseUrl + "/accountStores"
       val route = (POST, url, Action { request =>
         request.body.asJson match {
           case Some(js) =>
@@ -942,9 +942,9 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         isDefaultAccountStore = testMapping.isDefaultAccountStore,
         isDefaultGroupStore = testMapping.isDefaultGroupStore
       )
-      val url = baseUrl + "/accountStoreMappings"
+      val url = baseUrl + "/accountStores"
       val route = (POST, url, Action {
-        BadRequest(Json.toJson(BadRequestException("accountStoreMappings","some message","some developer message")))
+        BadRequest(Json.toJson(BadRequestException("accountStores","some message","some developer message")))
       })
       implicit val security = getSecurity(route)
       await(GestaltAccountStoreMapping.createMapping(createRequest)) must throwA[BadRequestException]

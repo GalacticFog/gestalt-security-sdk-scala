@@ -53,26 +53,26 @@ case class GestaltAccountStoreMapping(id: UUID,
                                       isDefaultAccountStore: Boolean,
                                       isDefaultGroupStore: Boolean) extends GestaltResource {
 
-  override val href: String = s"/accountStoreMappings/${id}"
+  override val href: String = s"/accountStores/${id}"
 
   def delete()(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    GestaltAccountStoreMapping.delete(id.toString)
+    GestaltAccountStoreMapping.delete(id)
   }
 }
 
 object GestaltAccountStoreMapping {
 
   def createMapping(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
-    client.post[GestaltAccountStoreMapping](s"accountStoreMappings",Json.toJson(createRequest))
+    client.post[GestaltAccountStoreMapping](s"accountStores",Json.toJson(createRequest))
   }
 
-  def delete(mappingId: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"accountStoreMappings/${mappingId}") map {_.wasDeleted}
+  def delete(mappingId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"accountStores/${mappingId}") map {_.wasDeleted}
   }
 
-  def getById(mappingId: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccountStoreMapping]] = {
+  def getById(mappingId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccountStoreMapping]] = {
     // option semantics for this one
-    client.get[GestaltAccountStoreMapping](s"accountStoreMappings/${mappingId}") map {
+    client.get[GestaltAccountStoreMapping](s"accountStores/${mappingId}") map {
       b => Some(b)
     } recover {
       case notFound: ResourceNotFoundException => None
