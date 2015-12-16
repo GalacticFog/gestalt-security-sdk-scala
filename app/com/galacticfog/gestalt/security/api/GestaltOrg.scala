@@ -36,8 +36,8 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
     GestaltOrg.getAccountById(id, accountId)
   }
 
-  def getGroupByGroupnme(groupname: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
-    GestaltOrg.getGroupByUsername(id, groupname)
+  def getGroupByName(groupname: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    GestaltOrg.getGroupByName(id, groupname)
   }
 
   def getGroupById(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
@@ -65,6 +65,18 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
   def getApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.listApps(id)
 
   def listApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.listApps(id)
+
+  def listAccountGrants(username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    GestaltOrg.listAccountGrantsByUsername(id, username)
+  }
+
+  def listAccountGrants(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    GestaltOrg.listAccountGrants(id, accountId)
+  }
+
+  def listGroupGrants(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    GestaltOrg.listGroupGrants(id, groupId)
+  }
 }
 
 case class GestaltOrgSync(accounts: Seq[GestaltAccount], orgs: Seq[GestaltOrg])
@@ -74,8 +86,26 @@ case class GestaltOrgCreate(name: String, createDefaultUserGroup: Option[Boolean
 case class GestaltOrgUpdate(name: String)
 
 case object GestaltOrg {
-  def getGroupById(orgId: UUID, groupId: UUID): Future[Option[GestaltGroup]] = ???
 
+  def listGroupGrants(orgId: UUID, groupId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    client.get[Seq[GestaltRightGrant]](s"orgs/${orgId}/groups/${groupId}/rights")
+  }
+
+  def listAccountGrantsByUsername(orgId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    client.get[Seq[GestaltRightGrant]](s"orgs/${orgId}/usernames/${username}/rights")
+  }
+
+  def listAccountGrants(orgId: UUID, accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
+    client.get[Seq[GestaltRightGrant]](s"orgs/${orgId}/accounts/${accountId}/rights")
+  }
+
+  def getGroupByName(orgId: UUID, name: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    client.getOpt[GestaltGroup](s"orgs/${orgId}/groupnames/${name}")
+  }
+
+  def getGroupById(orgId: UUID, groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    client.getOpt[GestaltGroup](s"orgs/${orgId}/groups/${groupId}")
+  }
 
   def getAccountByUsername(orgId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
     client.getOpt[GestaltAccount](s"orgs/${orgId}/usernames/${username}")
