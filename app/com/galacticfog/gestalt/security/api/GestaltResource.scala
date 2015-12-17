@@ -2,6 +2,7 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 import scala.language.experimental.macros
+import scala.reflect.macros.whitebox.Context
 
 import com.galacticfog.gestalt.io.util.PatchOp
 import play.api.libs.json.{JsNull, JsValue, Json}
@@ -25,7 +26,7 @@ trait PatchSupport[A <: PatchSupport[A]] {
   import PatchSupport._
 
   def update(elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A]): Future[A] = {
-    PatchSupport.updateImpl[A](this.asInstanceOf[A], elems: _*)
+    PatchSupport.update[A](this.asInstanceOf[A], elems: _*)
   }
 }
 
@@ -33,7 +34,7 @@ object PatchSupport {
   import com.galacticfog.gestalt.io.util.PatchUpdate._
   val REMOVE = JsNull
 
-  def updateImpl[A: ClassTag](orig: A, elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A], typeTag: ru.TypeTag[A]): Future[A] = {
+  def updateImplOld[A: ClassTag](orig: A, elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A], typeTag: ru.TypeTag[A]): Future[A] = {
     val patches = genPatch[A](orig, elems:_*)
     client.patchWithAuth[A](
       orig.asInstanceOf[GestaltResource].href,
@@ -42,6 +43,22 @@ object PatchSupport {
       password = client.apiSecret
     )
   }
+
+  def defUpdateImpl[A: c.WeakTypeTag](c: Context)
+                                     (orig: c.Expr[A], elems: c.Expr[(Symbol, JsValue)]*)
+                                     (client: c.Expr[GestaltSecurityClient], fjs: c.Expr[play.api.libs.json.Reads[A]], m: c.Expr[reflect.Manifest[A]])
+  : c.Expr[Future[A]] = {
+    ???
+//    val patches = genPatch[A](orig, elems:_*)
+//    client.patchWithAuth[A](
+//      orig.asInstanceOf[GestaltResource].href,
+//      Json.toJson(patches),
+//      username = client.apiKey,
+//      password = client.apiSecret
+//    )
+  }
+
+  def update[A](orig: A, elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A]): Future[A] = macro defUpdateImpl[A]
 
   def genPatch[A: ClassTag](orig: A, elems: (Symbol, JsValue)*)(implicit typeTag: ru.TypeTag[A]): Seq[PatchOp] = {
     val m: ru.Mirror = ru.runtimeMirror(orig.getClass.getClassLoader)
