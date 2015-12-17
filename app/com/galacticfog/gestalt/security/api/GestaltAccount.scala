@@ -7,7 +7,16 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class GestaltAccount(id: UUID, username: String, firstName: String, lastName: String, email: String, phoneNumber: String, directory: GestaltDirectory) extends GestaltResource {
+case class GestaltAccount(id: UUID,
+                          username: String,
+                          firstName: String,
+                          lastName: String,
+                          email: String,
+                          phoneNumber: String,
+                          directory: GestaltDirectory)
+  extends GestaltResource
+  with PatchSupport[GestaltAccount]
+{
   override val name: String = username
   override val href: String = s"/accounts/${id}"
 }

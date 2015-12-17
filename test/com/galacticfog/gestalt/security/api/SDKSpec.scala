@@ -2,25 +2,29 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.{UUID}
 
+import com.galacticfog.gestalt.io.util.{PatchUpdate, PatchOp}
+import PatchUpdate._
 import com.galacticfog.gestalt.security.api.errors._
 import mockws.MockWS
-import org.apache.commons.codec.binary.Base64
 import org.junit.runner._
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 import org.specs2.runner._
 import org.specs2.specification.Scope
-import play.api.libs.json.{JsValue, Json}
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.api.mvc._
 import play.api.mvc.Action
 import play.api.mvc.Results._
 import play.api.test.Helpers._
 import com.galacticfog.gestalt.security.api.json.JsonImports._
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 
+import scala.annotation.meta.field
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+
 
 /**
  * Add your spec here.
@@ -29,6 +33,17 @@ import scala.util.{Failure, Success, Try}
  */
 @RunWith(classOf[JUnitRunner])
 class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultAwaitTimeout {
+
+  case class TestClass(override val name: String,
+                       val reqString: String,
+                       val maybeInt: Option[Int] = None,
+                       val maybeString: Option[String] = None) extends GestaltResource with PatchSupport[TestClass] {
+
+    override val id: UUID = UUID.randomUUID()
+    override val href: String = s"/tests/${id}"
+  }
+
+  implicit val testFormat = Json.format[TestClass]
 
   trait TestParameters extends Scope {
     val hostname = "security.galacticfog.com"
@@ -65,6 +80,125 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         case (m,u) if m == r._1 && u == r._2 => r._3
       }
       GestaltSecurityClient(mockws, HTTP, hostname, port, apiKey, apiSecret)
+    }
+
+  }
+
+  "GestaltResource" should {
+
+    "support patch add on option fields" in {
+      val test = TestClass(
+        name = "oldName",
+        maybeInt = Some(1),
+        reqString = "value"
+      )
+
+      val patches = PatchSupport.genPatch(test,
+        'name -> Json.toJson("newName"),
+        'maybeString -> Json.toJson("string")
+      )
+      patches must containTheSameElementsAs(Seq(
+        PatchOp("replace", "/name",        JsString("newName")),
+        PatchOp("add",     "/maybeString", JsString("string"))
+      ))
+    }
+
+    "support patch replace on option fields" in {
+      val test = TestClass(
+        name = "oldName",
+        reqString = "value",
+        maybeInt = Some(1)
+      )
+
+      val patches = PatchSupport.genPatch(test,
+        'maybeInt -> Json.toJson(1)
+      )
+      patches must containTheSameElementsAs(Seq(
+        PatchOp("replace", "/maybeInt", Json.toJson(1))
+      ))
+    }
+
+    "support patch remove" in {
+      val test = TestClass(
+        name = "name",
+        reqString = "value",
+        maybeInt = Some(1),
+        maybeString = Some("string")
+      )
+      val patches = PatchSupport.genPatch(test,
+        'maybeInt -> PatchSupport.REMOVE,
+        'maybeString -> PatchSupport.REMOVE
+      )
+      patches must containTheSameElementsAs(Seq(
+        PatchOp("remove", "/maybeInt", JsString("")),
+        PatchOp("remove", "/maybeString", JsString(""))
+      ))
+    }
+
+    "throw an error on invalid fields" in {
+      val test = TestClass("name", "value")
+      PatchSupport.genPatch(test,
+        'maybeInt -> PatchSupport.REMOVE,
+        'badField -> Json.toJson("no matter")
+      ) must throwA[RuntimeException](".*does not exist.*")
+    }
+
+    "throw an exception if REMOVE passed to a non-Option field" in {
+      val test = TestClass("name", "value")
+      PatchSupport.genPatch(test,
+        'name -> PatchSupport.REMOVE
+      ) must throwA[RuntimeException](".*is not Option.*")
+    }
+
+    "throw an exception on repeated fields" in {
+      val test = TestClass("name", "value")
+      PatchSupport.genPatch(test,
+        'maybeInt -> PatchSupport.REMOVE,
+        'maybeInt -> Json.toJson(5)
+      ) must throwA[RuntimeException](".*multiple times.*")
+    }
+
+    "patch appropriately via the client" in new TestParameters {
+      val test = TestClass(name = "name", reqString = "value", maybeInt = Some(1), maybeString = None)
+      val expected = TestClass(name = "newName", reqString = "newValue", maybeInt = None, maybeString = Some("present"))
+
+      val route = ("PATCH", baseUrl + test.href, Action(BodyParsers.parse.json) { implicit request =>
+        val patches = request.body.as[Seq[PatchOp]]
+        val patched = patches.foldLeft(test)( (c,p) =>
+          p.path match {
+            case "/name" => if (p.op == "replace") {
+              c.copy(name = p.value.as[String])
+            } else throw new RuntimeException
+            case "/reqString" => if (p.op == "replace") {
+              c.copy(reqString = p.value.as[String])
+            } else throw new RuntimeException
+            case "/maybeInt" => p.op match {
+              case "replace" if c.maybeInt.isDefined => c.copy(maybeInt = Some(p.value.as[Int]))
+              case "add" if c.maybeInt.isEmpty => c.copy(maybeInt = Some(p.value.as[Int]))
+              case "remove" => c.copy(maybeInt = None)
+              case _ => throw new RuntimeException
+            }
+            case "/maybeString" => p.op match {
+              case "replace" if c.maybeString.isDefined => c.copy(maybeString = Some(p.value.as[String]))
+              case "add" if c.maybeString.isEmpty => c.copy(maybeString = Some(p.value.as[String]))
+              case "remove" => c.copy(maybeString = None)
+              case _ => throw new RuntimeException
+            }
+          }
+        )
+        Ok(Json.toJson(patched))
+      })
+
+      implicit val client = getSecurityJson(route)
+
+      val updated: TestClass = await(test.update(
+        'name -> Json.toJson("newName"),
+        'reqString -> Json.toJson("newValue"),
+        'maybeInt -> PatchSupport.REMOVE,
+        'maybeString -> Json.toJson("present")
+      ))
+
+      updated must_== expected
     }
 
   }
@@ -581,7 +715,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testAccount.username}/rights"
       val route = (GET, url, Action { Ok(testResp) })
       implicit val security = getSecurity(route)
-      val grants = await(testApp.listGrants(testAccount.username))
+      val grants = await(testApp.listAccountGrants(testAccount.username))
       grants must_== Seq(grant1,grant2)
     }
 
@@ -590,7 +724,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { NotFound(Json.toJson(ResourceNotFoundException("username","resource missing","I have no idea what you're asking for."))) })
       implicit val security = getSecurity(route)
-      await(testApp.listGrants(testUsername)) must throwA[ResourceNotFoundException]
+      await(testApp.listAccountGrants(testUsername)) must throwA[ResourceNotFoundException]
     }
 
     "list right grants for 400 returns failure" in new TestParameters {
@@ -598,7 +732,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + s"/apps/${testApp.id}/usernames/${testUsername}/rights"
       val route = (GET, url, Action { BadRequest(Json.toJson(BadRequestException("username","you did something bad","You've probably done something bad."))) })
       implicit val security = getSecurity(route)
-      await(testApp.listGrants(testUsername)) must throwA[BadRequestException]
+      await(testApp.listAccountGrants(testUsername)) must throwA[BadRequestException]
     }
 
     "get a right grant by name" in new TestParameters {

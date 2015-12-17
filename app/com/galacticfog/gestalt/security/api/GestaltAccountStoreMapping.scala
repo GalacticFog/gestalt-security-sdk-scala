@@ -51,8 +51,9 @@ case class GestaltAccountStoreMapping(id: UUID,
                                       storeId: UUID,
                                       appId: UUID,
                                       isDefaultAccountStore: Boolean,
-                                      isDefaultGroupStore: Boolean) extends GestaltResource {
-
+                                      isDefaultGroupStore: Boolean)
+  extends GestaltResource with PatchSupport[GestaltAccountStoreMapping]
+{
   override val href: String = s"/accountStores/${id}"
 
   def delete()(implicit client: GestaltSecurityClient): Future[Boolean] = {
