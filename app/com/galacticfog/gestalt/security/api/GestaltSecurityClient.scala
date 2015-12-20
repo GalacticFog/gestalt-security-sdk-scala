@@ -67,6 +67,10 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     deleteJson(uri, username, password) map validate[DeleteResult]
   }
 
+  def deleteJson[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    deleteJson(uri, apiKey, apiSecret) map validate[T]
+  }
+
   def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
     getJson(uri, username = apiKey, password = apiSecret) map validate[T]
   }

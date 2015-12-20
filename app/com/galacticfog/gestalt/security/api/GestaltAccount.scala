@@ -19,9 +19,25 @@ case class GestaltAccount(id: UUID,
 {
   override val name: String = username
   override val href: String = s"/accounts/${id}"
+
+  def deregisterEmail()(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    GestaltAccount.deregisterEmail(id)
+  }
+
+  def deregisterPhoneNumber()(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    GestaltAccount.deregisterPhoneNumber(id)
+  }
 }
 
 case object GestaltAccount {
+  def deregisterPhoneNumber(id: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.deleteJson[GestaltAccount](s"accounts/${id}/phoneNumber")
+  }
+
+  def deregisterEmail(id: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.deleteJson[GestaltAccount](s"accounts/${id}/email")
+  }
+
   def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.getWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",username,password)
   }
