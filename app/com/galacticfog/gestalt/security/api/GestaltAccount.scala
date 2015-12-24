@@ -27,15 +27,24 @@ case class GestaltAccount(id: UUID,
   def deregisterPhoneNumber()(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     GestaltAccount.deregisterPhoneNumber(id)
   }
+
+  def listGroupMemberships()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltAccount.listGroupMemberships(id)
+  }
 }
 
 case object GestaltAccount {
-  def deregisterPhoneNumber(id: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.deleteJson[GestaltAccount](s"accounts/${id}/phoneNumber")
+
+  def listGroupMemberships(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"accounts/${accountId}/groups")
   }
 
-  def deregisterEmail(id: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.deleteJson[GestaltAccount](s"accounts/${id}/email")
+  def deregisterPhoneNumber(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.deleteJson[GestaltAccount](s"accounts/${accountId}/phoneNumber")
+  }
+
+  def deregisterEmail(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.deleteJson[GestaltAccount](s"accounts/${accountId}/email")
   }
 
   def getAccountGroups(accountId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {

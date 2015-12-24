@@ -20,6 +20,18 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
     GestaltDirectory.createAccount(id, create)
   }
 
+  def createGroup(create: GestaltGroupCreate)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
+    GestaltDirectory.createGroup(id, create)
+  }
+
+  def getAccountByUsername(username: String)(implicit client: GestaltSecurityClient) = {
+    GestaltDirectory.getAccountByUsername(id, username)
+  }
+
+  def getGroupByName(groupName: String)(implicit client: GestaltSecurityClient) = {
+    GestaltDirectory.getGroupByName(id, groupName)
+  }
+
   @deprecated("use listAccounts", since = "2.0.0")
   def getAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     listAccounts()
@@ -41,6 +53,17 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
 
 object GestaltDirectory {
 
+  def createGroup(dirId: UUID, create: GestaltGroupCreate)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
+    client.post[GestaltGroup](s"directories/${dirId}/groups", Json.toJson(create))
+  }
+
+  def getAccountByUsername(dirId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+    client.getOpt[GestaltAccount](s"directories/${dirId}/usernames/${username}")
+  }
+
+  def getGroupByName(dirId: UUID, groupName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    client.getOpt[GestaltGroup](s"directories/${dirId}/groupnames/${groupName}")
+  }
 
   def getById(dirId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltDirectory]] = {
     // different semantics for this one

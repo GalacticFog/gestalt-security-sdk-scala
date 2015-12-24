@@ -77,6 +77,11 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
   def listGroupGrants(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
     GestaltOrg.listGroupGrants(id, groupId)
   }
+
+  def listOrgs()(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+    GestaltOrg.listOrgs(id)
+  }
+
 }
 
 case class GestaltOrgSync(accounts: Seq[GestaltAccount], orgs: Seq[GestaltOrg])
@@ -196,7 +201,16 @@ case object GestaltOrg {
     client.post[GestaltApp](s"orgs/${orgId}/apps",Json.toJson(createRequest))
   }
 
+  def listOrgs(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+    client.get[Seq[GestaltOrg]](s"orgs/${orgId}/orgs")
+  }
+
+  @deprecated("use listOrgs","2.0.0")
   def getOrgs(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+    listOrgs(username, password)
+  }
+
+  def listOrgs(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
     client.getWithAuth[Seq[GestaltOrg]]("orgs",username,password)
   }
 
