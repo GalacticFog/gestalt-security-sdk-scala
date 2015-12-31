@@ -1,8 +1,9 @@
 package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
+import com.galacticfog.gestalt.io.util.PatchOp
 import com.galacticfog.gestalt.security.api.json.JsonImports._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsString, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -98,6 +99,10 @@ case class GestaltGroup(id: UUID, name: String, directoryId: UUID, disabled: Boo
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] =
     GestaltGroup.listAccounts(id)
+
+  def updateMembership(add: Seq[UUID] = Seq(), remove: Seq[UUID] = Seq())(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    GestaltGroup.updateMembership(id, add, remove)
+  }
 }
 
 case class GestaltGroupCreate(name: String)
@@ -122,5 +127,15 @@ case object GestaltGroup {
 
   def deleteGroup(groupId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
     client.delete(s"groups/${groupId}", username, password) map {_.wasDeleted}
+  }
+
+  def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    import com.galacticfog.gestalt.io.util.PatchUpdate._
+    client.patchWithAuth[Seq[GestaltAccount]](s"groups/${groupId}/accounts",
+    payload = Json.toJson(
+      add.map {accountId => PatchOp("add","",Json.toJson(accountId))} ++
+      remove.map {accountId => PatchOp("remove","",Json.toJson(accountId))}
+    ),
+    username = client.apiKey, password = client.apiSecret)
   }
 }
