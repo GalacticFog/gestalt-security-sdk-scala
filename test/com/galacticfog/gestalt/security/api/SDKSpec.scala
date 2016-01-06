@@ -245,7 +245,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "properly produce and parse JSON for CreateConflictException objects" in {
-      val ex = CreateConflictException("res","foo","bar")
+      val ex = ConflictException("res","foo","bar")
       val json = Json.toJson(ex)
       val ex2 = json.as[SecurityRESTException]
       ex2 must_== ex
@@ -473,7 +473,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "create a new org" in new TestParameters {
       val parent = UUID.randomUUID()
-      val createRequest = GestaltOrgCreate(testOrg.name)
+      val createRequest = GestaltOrgCreate(testOrg.name, true)
       implicit val security = mock[GestaltSecurityClient]
       security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future{testOrg}
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name))
@@ -484,7 +484,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val parent = UUID.randomUUID()
       val testUsername = "jdoe"
       val testPassword = "monkey"
-      val createRequest = GestaltOrgCreate(testOrg.name)
+      val createRequest = GestaltOrgCreate(testOrg.name, true)
       implicit val security = mock[GestaltSecurityClient]
       security.postWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), testUsername, testPassword) returns Future{testOrg}
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name, testUsername, testPassword))

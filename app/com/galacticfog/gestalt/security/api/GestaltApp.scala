@@ -30,6 +30,18 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
     GestaltApp.getAccountByUsername(id, username)
   }
 
+  def getAccountById(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+    GestaltApp.getAccountById(id, accountId)
+  }
+
+  def getGroupByName(groupName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    GestaltApp.getGroupByName(id, groupName)
+  }
+
+  def getGroupById(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    GestaltApp.getGroupById(id, groupId)
+  }
+
   def addGrant(username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     GestaltApp.addGrant(id, username, grant)
   }
@@ -88,8 +100,21 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
 
 case object GestaltApp {
 
+  def getAccountById(appId: UUID, accountId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+    client.getOpt[GestaltAccount](s"apps/${appId}/accounts/${accountId}")
+  }
+
+  def getGroupById(appId: UUID, groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    client.getOpt[GestaltGroup](s"apps/${appId}/groups/${groupId}")
+  }
+
   def listGroups(appId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.get[Seq[GestaltGroup]](s"apps/${appId}/groups")
+  }
+
+
+  def getGroupByName(appId: UUID, groupName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
+    client.getOpt[GestaltGroup](s"apps/${appId}/groupnames/${groupName}")
   }
 
   def getAccountByUsername(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {

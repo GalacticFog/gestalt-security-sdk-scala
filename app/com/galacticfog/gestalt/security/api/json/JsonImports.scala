@@ -108,7 +108,7 @@ object JsonImports {
             case 401 => JsSuccess(UnauthorizedAPIException(resource = resource, message = message, developerMessage = devMessage))
             case 403 => JsSuccess(ForbiddenAPIException(message = message, developerMessage = devMessage))
             case 404 => JsSuccess(ResourceNotFoundException(resource = resource, message = message, developerMessage = devMessage))
-            case 409 => JsSuccess(CreateConflictException(resource = resource, message = message, developerMessage = devMessage))
+            case 409 => JsSuccess(ConflictException(resource = resource, message = message, developerMessage = devMessage))
             case _   => JsSuccess(UnknownAPIException(code = code, resource = resource, message = message, developerMessage = devMessage))
           }
         case None => JsError("expected code: Int")

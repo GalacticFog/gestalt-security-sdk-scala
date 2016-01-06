@@ -86,7 +86,7 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
 
 case class GestaltOrgSync(accounts: Seq[GestaltAccount], orgs: Seq[GestaltOrg])
 
-case class GestaltOrgCreate(name: String, createDefaultUserGroup: Option[Boolean] = None)
+case class GestaltOrgCreate(name: String, createDefaultUserGroup: Boolean)
 
 case class GestaltOrgUpdate(name: String)
 
@@ -182,11 +182,11 @@ case object GestaltOrg {
   }
 
   def createSubOrg(parentOrgId: UUID, name: String)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
-    client.post[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(name = name)))
+    client.post[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(name = name, createDefaultUserGroup = true)))
   }
 
   def createSubOrg(parentOrgId: UUID, name: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
-    client.postWithAuth[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(name = name)),username,password)
+    client.postWithAuth[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(GestaltOrgCreate(name = name, createDefaultUserGroup = true)),username,password)
   }
 
   def deleteOrg(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
