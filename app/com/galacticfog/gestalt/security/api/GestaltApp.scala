@@ -78,6 +78,10 @@ case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean
     GestaltApp.createAccount(id, create)
   }
 
+  def mapAccountStore(create: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
+    GestaltApp.mapAccountStore(id, create)
+  }
+
   def listAccountStores()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccountStoreMapping]] = {
     GestaltApp.listAccountStores(id)
   }
@@ -155,6 +159,10 @@ case object GestaltApp {
 
   def createAccount(appId: UUID, create: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"apps/${appId}/accounts",Json.toJson(create))
+  }
+
+  def mapAccountStore(appId: UUID, createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
+    client.post[GestaltAccountStoreMapping](s"apps/${appId}/accountStores",Json.toJson(createRequest))
   }
 
   def getById(appId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {

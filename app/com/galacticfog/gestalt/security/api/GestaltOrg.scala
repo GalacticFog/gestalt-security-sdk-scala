@@ -15,6 +15,10 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
     GestaltOrg.createDirectory(id, createRequest)
   }
 
+  def mapAccountStore(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
+    GestaltOrg.mapAccountStore(id, createRequest)
+  }
+
   def createApp(createRequest: GestaltAppCreate)(implicit client: GestaltSecurityClient): Future[GestaltApp] =
     GestaltOrg.createApp(id, createRequest)
 
@@ -51,6 +55,10 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, parent: Option[Resou
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = GestaltOrg.listAccounts(id)
 
   def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = GestaltOrg.listGroups(id)
+
+  def listAccountStores()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccountStoreMapping]] = {
+    GestaltOrg.listAccountStores(id)
+  }
 
   @deprecated("use listDirectories","2.0.0")
   def getDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = GestaltOrg.listDirectories(id)
@@ -104,6 +112,10 @@ case object GestaltOrg {
     client.get[Seq[GestaltRightGrant]](s"orgs/${orgId}/accounts/${accountId}/rights")
   }
 
+  def listAccountStores(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccountStoreMapping]] = {
+    client.get[Seq[GestaltAccountStoreMapping]](s"orgs/${orgId}/accountStores")
+  }
+
   def getGroupByName(orgId: UUID, name: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
     client.getOpt[GestaltGroup](s"orgs/${orgId}/groupnames/${name}")
   }
@@ -150,6 +162,10 @@ case object GestaltOrg {
 
   def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights, username: String, password: String)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.postWithAuth[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest), username, password)
+  }
+
+  def mapAccountStore(orgId: UUID, createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
+    client.post[GestaltAccountStoreMapping](s"orgs/${orgId}/accountStores",Json.toJson(createRequest))
   }
 
   def authorizeFrameworkUser(apiKey: String, apiSecret: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {

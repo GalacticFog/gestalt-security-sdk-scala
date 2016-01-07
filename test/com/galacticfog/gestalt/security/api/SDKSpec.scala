@@ -917,6 +917,49 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       testResponse must_== grant
     }
 
+    "create an account store mapping" in new TestParameters {
+      val createRequest = GestaltAccountStoreMappingCreate(
+        name = testMapping.name,
+        description = testMapping.description,
+        storeType = testMapping.storeType,
+        accountStoreId = testMapping.storeId,
+        isDefaultAccountStore = testMapping.isDefaultAccountStore,
+        isDefaultGroupStore = testMapping.isDefaultGroupStore
+      )
+      val url = baseUrl + s"/apps/${testApp.id}/accountStores"
+      val route = (POST, url, Action { request =>
+        request.body.asJson match {
+          case Some(js) =>
+            // check parsing ability: gestalt-security uses this
+            val c = js.as[GestaltAccountStoreMappingCreate]
+            if (c == createRequest) Created(Json.toJson(testMapping))
+            else BadRequest("did not get the json body I was expecting")
+          case None => BadRequest("was expecting json")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val newMapping = await(testApp.mapAccountStore(createRequest))
+      newMapping must_== testMapping
+    }
+
+    "create account store mapping failure returns failed try" in new TestParameters {
+      val createRequest = GestaltAccountStoreMappingCreate(
+        name = testMapping.name,
+        description = testMapping.description,
+        storeType = testMapping.storeType,
+        accountStoreId = testMapping.storeId,
+        isDefaultAccountStore = testMapping.isDefaultAccountStore,
+        isDefaultGroupStore = testMapping.isDefaultGroupStore
+      )
+      val url = baseUrl + s"/apps/${testApp.id}/accountStores"
+      val route = (POST, url, Action {
+        BadRequest(Json.toJson(BadRequestException("accountStores","some message","some developer message")))
+      })
+      implicit val security = getSecurity(route)
+      await(testApp.mapAccountStore(createRequest)) must throwA[BadRequestException]
+    }
+
+
   }
 
   "GestaltDirectory" should {
@@ -1038,50 +1081,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getSecurity(route)
       val wasDeleted = await(testMapping.delete())
       wasDeleted must_== false
-    }
-
-    "create an account store mapping" in new TestParameters {
-      val createRequest = GestaltAccountStoreMappingCreate(
-        name = testMapping.name,
-        description = testMapping.description,
-        storeType = testMapping.storeType,
-        accountStoreId = testMapping.storeId,
-        appId = testMapping.appId,
-        isDefaultAccountStore = testMapping.isDefaultAccountStore,
-        isDefaultGroupStore = testMapping.isDefaultGroupStore
-      )
-      val url = baseUrl + "/accountStores"
-      val route = (POST, url, Action { request =>
-        request.body.asJson match {
-          case Some(js) =>
-            // check parsing ability: gestalt-security uses this
-            val c = js.as[GestaltAccountStoreMappingCreate]
-            if (c == createRequest) Created(Json.toJson(testMapping))
-            else BadRequest("did not get the json body I was expecting")
-          case None => BadRequest("was expecting json")
-        }
-      })
-      implicit val security = getSecurity(route)
-      val newMapping = await(GestaltAccountStoreMapping.createMapping(createRequest))
-      newMapping must_== testMapping
-    }
-
-    "create account store mapping failure returns failed try" in new TestParameters {
-      val createRequest = GestaltAccountStoreMappingCreate(
-        name = testMapping.name,
-        description = testMapping.description,
-        storeType = testMapping.storeType,
-        accountStoreId = testMapping.storeId,
-        appId = testMapping.appId,
-        isDefaultAccountStore = testMapping.isDefaultAccountStore,
-        isDefaultGroupStore = testMapping.isDefaultGroupStore
-      )
-      val url = baseUrl + "/accountStores"
-      val route = (POST, url, Action {
-        BadRequest(Json.toJson(BadRequestException("accountStores","some message","some developer message")))
-      })
-      implicit val security = getSecurity(route)
-      await(GestaltAccountStoreMapping.createMapping(createRequest)) must throwA[BadRequestException]
     }
 
   }

@@ -23,21 +23,8 @@ case class GestaltAccountStoreMappingCreate(name: String,
                                             description: String,
                                             storeType: GestaltAccountStoreType,
                                             accountStoreId: UUID,
-                                            appId: UUID,
                                             isDefaultAccountStore: Boolean,
                                             isDefaultGroupStore: Boolean) {
-  def this(name: String, description: String, dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = DIRECTORY, accountStoreId = dir.id, appId = app.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
-  def this(name: String, description: String, group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = GROUP, accountStoreId = group.id, appId = app.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
-}
-
-case class GestaltOrgAccountStoreMappingCreate(name: String,
-                                               description: String,
-                                               storeType: GestaltAccountStoreType,
-                                               accountStoreId: UUID,
-                                               isDefaultAccountStore: Boolean,
-                                               isDefaultGroupStore: Boolean) {
   def this(name: String, description: String, dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
     this(name, description, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
   def this(name: String, description: String, group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
@@ -63,10 +50,6 @@ case class GestaltAccountStoreMapping(id: UUID,
 
 object GestaltAccountStoreMapping {
 
-  def createMapping(createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
-    client.post[GestaltAccountStoreMapping](s"accountStores",Json.toJson(createRequest))
-  }
-
   def delete(mappingId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
     client.delete(s"accountStores/${mappingId}") map {_.wasDeleted}
   }
@@ -79,5 +62,5 @@ object GestaltAccountStoreMapping {
       case notFound: ResourceNotFoundException => None
     }
   }
-}
 
+}
