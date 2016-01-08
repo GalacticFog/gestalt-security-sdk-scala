@@ -53,6 +53,10 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
 
 object GestaltDirectory {
 
+  def deleteDirectory(dirId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.delete(s"directories/${dirId}") map { _.wasDeleted }
+  }
+
   def createGroup(dirId: UUID, create: GestaltGroupCreate)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
     client.post[GestaltGroup](s"directories/${dirId}/groups", Json.toJson(create))
   }
