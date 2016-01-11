@@ -283,11 +283,11 @@ case object GestaltOrg {
   }
 
   def addGrantToAccount(orgId: UUID, accountId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
-    client.post[GestaltRightGrant](s"apps/${orgId}/accounts/${accountId}/rights",Json.toJson(grant))
+    client.post[GestaltRightGrant](s"orgs/${orgId}/accounts/${accountId}/rights",Json.toJson(grant))
   }
 
   def addGrantToGroup(orgId: UUID, groupId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
-    client.post[GestaltRightGrant](s"apps/${orgId}/groups/${groupId}/rights",Json.toJson(grant))
+    client.post[GestaltRightGrant](s"orgs/${orgId}/groups/${groupId}/rights",Json.toJson(grant))
   }
 }
 
