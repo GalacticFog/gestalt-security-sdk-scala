@@ -1,8 +1,12 @@
 package com.galacticfog.gestalt.security.api
 
+import java.time.Instant
 import java.util.{UUID}
 
 import com.galacticfog.gestalt.io.util.{PatchUpdate, PatchOp}
+import com.galacticfog.gestalt.security.api.AccessTokenResponse.BEARER
+import com.galacticfog.gestalt.security.api.GestaltToken.ACCESS_TOKEN
+import org.joda.time.DateTime
 import PatchUpdate._
 import com.galacticfog.gestalt.security.api.errors._
 import mockws.MockWS
@@ -65,6 +69,25 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       directory = testDir
     )
     val testMapping = GestaltAccountStoreMapping(UUID.randomUUID,"Staff Members","Staff members authorized for this app.",DIRECTORY,testDir.id,testApp.id,false,false)
+
+    val testToken = OpaqueToken(UUID.randomUUID(),ACCESS_TOKEN)
+    val testValidTokenResponse = Json.obj(
+      "username" -> s"${testAccount.username}",
+      "sub" -> s"${testAccount.href}",
+      "iss" -> "https://security:9455",
+      "exp" -> Instant.now.getEpochSecond,
+      "iat" -> Instant.now.getEpochSecond,
+      "jti" -> testToken.id,
+      "gestalt_token_href" -> testToken.href,
+      "gestalt_rights" -> Json.arr()
+    ).as[ValidTokenResponse]
+
+    val testTokenAuthResponse = Json.obj(
+      "access_token" -> testToken.toString,
+      "token_type" -> BEARER.toString(),
+      "expires_in" -> 3600,
+      "gestalt_access_token_href" -> s"https://security:9455/tokens/${testToken.id.toString}"
+    ).as[AccessTokenResponse]
 
     def getSecurity(routes: Tuple3[String,String,Action[AnyContent]]): GestaltSecurityClient = {
       val r = routes
@@ -354,6 +377,99 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getSecurity(route)
       val org = await(GestaltOrg.getCurrentOrg)
       org must_== returnedOrg
+    }
+
+    "generate tokens against orgId from password grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val now = DateTime.now()
+      val newToken = OpaqueToken(UUID.randomUUID(),ACCESS_TOKEN)
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if (data.get("grant_type") == Some(Seq("password")) &&
+                              data.get("username")   == Some(Seq("user")) &&
+                              data.get("password")   == Some(Seq("pass"))) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltOrg.grantPasswordToken(testOrg.id, "user", "pass"))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "generate tokens against FQON from password grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val now = DateTime.now()
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if (data.get("grant_type") == Some(Seq("password")) &&
+            data.get("username")   == Some(Seq("user")) &&
+            data.get("password")   == Some(Seq("pass"))) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "handle tokens request failure from password grant" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      resp must beNone
+    }
+
+    "introspect valid token on server against fqon" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(testValidTokenResponse))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      resp must beAnInstanceOf[ValidTokenResponse]
+    }
+
+    "introspect invalid token on server against fqon" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(INVALID_TOKEN))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      resp must_== INVALID_TOKEN
+    }
+
+    "introspect valid token on server against org ID" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(testValidTokenResponse))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      resp must beAnInstanceOf[ValidTokenResponse]
+    }
+
+    "introspect invalid token on server against org ID" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(INVALID_TOKEN))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      resp must_== INVALID_TOKEN
     }
 
     "get an org by ID" in new TestParameters {

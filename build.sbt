@@ -50,6 +50,9 @@ libraryDependencies ++= Seq(
 // MockWS for testing
 libraryDependencies += "de.leanovate.play-mockws" %% "play-mockws" % "2.3.0" % "test" withSources()
 
+// jjwt for JSON Web Tokens
+//libraryDependencies += "io.jsonwebtoken" % "jjwt" % "0.6.0" withSources()
+
 
 // ----------------------------------------------------------------------------
 // Specs 2

@@ -1,6 +1,7 @@
 package com.galacticfog.gestalt.security.api
 
 import com.galacticfog.gestalt.security.api.errors._
+import play.api.http.MimeTypes
 import play.api.{Logger, Application}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -45,6 +46,12 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
 
   def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
     postJson(uri, payload, username = apiKey, password = apiSecret) map validate[T]
+  }
+
+  def postForm[T](endpoint: String, fields: Map[String, String])(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    client
+      .url(genUri(endpoint))
+      .post(fields.mapValues(Seq(_))) flatMap processResponse map validate[T]
   }
 
   def putWithAuth[T](uri: String, payload: JsValue, username: String, password: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
@@ -127,13 +134,16 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
   }
 
   private def genRequest(sendingJson: Boolean, endpoint: String, username: String, password: String): WSRequestHolder = {
-    val url = s"${protocol}://${hostname}:${port}/${removeLeadingSlash(endpoint)}"
-    val rh = client.url(url).withAuth(username = username, password = password, scheme = WSAuthScheme.BASIC)
+    val rh = client.url(genUri(endpoint)).withAuth(username = username, password = password, scheme = WSAuthScheme.BASIC)
     if (sendingJson) rh.withHeaders(
-        "Content-Type" -> "application/json",
-        "Accept" -> "application/json"
+        "Content-Type" -> MimeTypes.JSON,
+        "Accept" -> MimeTypes.JSON
       )
-    else rh.withHeaders("Accept" -> "application/json")
+    else rh.withHeaders("Accept" -> MimeTypes.JSON)
+  }
+
+  private def genUri(endpoint: String): String = {
+    s"${protocol}://${hostname}:${port}/${removeLeadingSlash(endpoint)}"
   }
 
   def getJson(endpoint: String, username: String, password: String): Future[JsValue] =
