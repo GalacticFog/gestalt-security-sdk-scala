@@ -2,11 +2,15 @@ package com.galacticfog.gestalt.security.api.json
 
 import java.util.UUID
 
+import com.galacticfog.gestalt.security.api.AccessTokenResponse.BEARER
+import com.galacticfog.gestalt.security.api.GestaltToken.ACCESS_TOKEN
 import com.galacticfog.gestalt.security.api._
 import com.galacticfog.gestalt.security.api.errors._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+
+import scala.util.Try
 
 
 object JsonImports {
@@ -87,6 +91,65 @@ object JsonImports {
     }
   }
   implicit val dirCreateRequest = Json.format[GestaltDirectoryCreate]
+
+  val tokenTypeReads = new Reads[AccessTokenResponse.TokenType] {
+    override def reads(json: JsValue): JsResult[AccessTokenResponse.TokenType] = json match {
+      case JsString(v) if v.toUpperCase == BEARER.toString().toUpperCase() => JsSuccess(BEARER)
+      case _ => JsError("invalid TokenType")
+    }
+  }
+  val tokenTypeWrites = new Writes[AccessTokenResponse.TokenType] {
+    override def writes(o: AccessTokenResponse.TokenType): JsValue = JsString(o.toString)
+  }
+  implicit val tokenTypeFormat = Format[AccessTokenResponse.TokenType](tokenTypeReads,tokenTypeWrites)
+  implicit val gestaltToken = new Format[GestaltToken] {
+    override def reads(json: JsValue): JsResult[GestaltToken] = json match {
+      case JsString(str) => Try {
+        UUID.fromString(str)
+      } map {uuid => JsSuccess(OpaqueToken(uuid,ACCESS_TOKEN))} getOrElse JsError("Expecting UUID when parsing GestaltToken")
+      case _ => JsError("Token format currently limited to OpaqueToken objects encoded a UUID in a JSON string")
+    }
+    override def writes(t: GestaltToken): JsValue = t match {
+      case o: OpaqueToken => JsString(o.id.toString)
+    }
+  }
+  val accessTokenRespReads: Reads[AccessTokenResponse] = (
+    (__ \ "access_token").read[GestaltToken] and
+      (__ \ "refresh_token").readNullable[GestaltToken] and
+      (__ \ "token_type").read[AccessTokenResponse.TokenType] and
+      (__ \ "expires_in").read[Long] and
+      (__ \ "gestalt_access_token_href").read[String]
+    )(AccessTokenResponse.apply _)
+  val accessTokenRespWrites: Writes[AccessTokenResponse] = (
+    (__ \ "access_token").write[GestaltToken] and
+      (__ \ "refresh_token").writeNullable[GestaltToken] and
+      (__ \ "token_type").write[AccessTokenResponse.TokenType] and
+      (__ \ "expires_in").write[Long] and
+      (__ \ "gestalt_access_token_href").write[String]
+    )(unlift(AccessTokenResponse.unapply))
+  implicit val accessTokenResp = Format(accessTokenRespReads,accessTokenRespWrites)
+
+  val validTokenReadBase = Json.reads[ValidTokenResponse]
+  val validTokenWriteBase = Json.writes[ValidTokenResponse]
+  implicit val validTokenIntrospectionReads = (__ \ "active").read[Boolean](true) andKeep __.read[ValidTokenResponse](validTokenReadBase)
+  val tokenIntrospectionResponseReads = new Reads[TokenIntrospectionResponse] {
+    override def reads(json: JsValue): JsResult[TokenIntrospectionResponse] = {
+      (json \ "active").asOpt[Boolean] match {
+        case Some(true) => json.validate[ValidTokenResponse]
+        case Some(false) => JsSuccess(INVALID_TOKEN)
+        case None => JsError("missing field 'active'; not a valid token introspection response")
+      }
+    }
+  }
+  val tokenIntrospectionResponseWrites = new Writes[TokenIntrospectionResponse] {
+    override def writes(r: TokenIntrospectionResponse): JsValue = {
+      Json.obj("active" -> r.active) ++ (r match {
+        case INVALID_TOKEN => Json.obj()
+        case v: ValidTokenResponse => Json.toJson(v)(validTokenWriteBase).as[JsObject]
+      })
+    }
+  }
+  implicit val tokenIntrospectionResponse = Format(tokenIntrospectionResponseReads,tokenIntrospectionResponseWrites)
 
   implicit val deleteResultFormat = Json.format[DeleteResult]
 

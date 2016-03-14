@@ -1,6 +1,7 @@
 package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
+import play.api.Logger
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -168,16 +169,56 @@ case object GestaltOrg {
     client.post[GestaltAccountStoreMapping](s"orgs/${orgId}/accountStores",Json.toJson(createRequest))
   }
 
+  private[this] def noneWithLog(msg: String): PartialFunction[Throwable,Option[Nothing]] = {
+    case e: Throwable =>
+      Logger.info(msg, e)
+      None
+  }
+
+  def grantPasswordToken(orgFQON: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[AccessTokenResponse]] = {
+    client.postForm[AccessTokenResponse](s"${orgFQON}/oauth/issue", Map(
+      "grant_type" -> "password",
+      "username"  -> username,
+      "password"  -> password
+    )) map Option.apply recover noneWithLog(s"failure retrieving password grant token from org ${orgFQON}")
+  }
+
+  def grantPasswordToken(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[AccessTokenResponse]] = {
+    client.postForm[AccessTokenResponse](s"orgs/${orgId}/oauth/issue", Map(
+      "grant_type" -> "password",
+      "username"  -> username,
+      "password"  -> password
+    )) map Option.apply recover noneWithLog(s"failure retrieving password grant token from org ${orgId}")
+  }
+
+  def validateToken(orgFQON: String, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"${orgFQON}/oauth/inspect", Map(
+      "token" -> token.toString
+    ))
+  }
+
+  def validateToken(orgId: UUID, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"orgs/${orgId}/oauth/inspect", Map(
+      "token" -> token.toString
+    ))
+  }
+
   def authorizeFrameworkUser(apiKey: String, apiSecret: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth[GestaltAuthResponse](s"auth", username = apiKey, password = apiSecret) map {Some(_)} recover {case _ => None}
+    client.postWithAuth[GestaltAuthResponse](s"auth", username = apiKey, password = apiSecret)
+      .map(Option.apply)
+      .recover(noneWithLog(s"failure authorizing framework user with api keys"))
   }
 
   def authorizeFrameworkUser(orgFQON: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth[GestaltAuthResponse](s"${orgFQON}/auth", username = username, password = password) map {Some(_)} recover {case _ => None}
+    client.postWithAuth[GestaltAuthResponse](s"${orgFQON}/auth", username = username, password = password)
+      .map(Option.apply)
+      .recover(noneWithLog(s"failure authorizing framework user against org ${orgFQON}"))
   }
 
   def authorizeFrameworkUser(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postWithAuth[GestaltAuthResponse](s"orgs/${orgId}/auth", username = username, password = password) map {Some(_)} recover {case _ => None}
+    client.postWithAuth[GestaltAuthResponse](s"orgs/${orgId}/auth", username = username, password = password)
+      .map(Option.apply)
+      .recover(noneWithLog(s"failure authorizing framework user against org ${orgId}"))
   }
 
   def getAppByName(orgId: UUID, appName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
@@ -234,7 +275,7 @@ case object GestaltOrg {
   def getApps(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = listApps(orgId)
 
   def listApps(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = {
-    client.get[Seq[GestaltApp]](s"orgs/${orgId}/apps") 
+    client.get[Seq[GestaltApp]](s"orgs/${orgId}/apps")
   }
 
   def getCurrentOrg(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
@@ -289,6 +330,6 @@ case object GestaltOrg {
   def addGrantToGroup(orgId: UUID, groupId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     client.post[GestaltRightGrant](s"orgs/${orgId}/groups/${groupId}/rights",Json.toJson(grant))
   }
-}
 
+}
 
