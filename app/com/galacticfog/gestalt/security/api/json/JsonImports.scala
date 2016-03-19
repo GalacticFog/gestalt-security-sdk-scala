@@ -40,6 +40,19 @@ object JsonImports {
   implicit val grantFormat = Json.format[GestaltRightGrant]
   implicit val authFormat = Json.format[GestaltAuthResponse]
   implicit val storeMappingFormat = Json.format[GestaltAccountStoreMapping]
+  implicit val mapusuReads = new Format[Map[UUID,Seq[UUID]]] {
+    override def reads(json: JsValue): JsResult[Map[UUID, Seq[UUID]]] = json.validate[Map[String,Seq[String]]] flatMap {
+      stringMap => Try {
+        JsSuccess(stringMap.map {
+          case (groupID, accountIDs) => (UUID.fromString(groupID), accountIDs.map(UUID.fromString))
+        })
+      } getOrElse(JsError("could not parse UUIDs in response"))
+    }
+
+    override def writes(m: Map[UUID, Seq[UUID]]): JsValue = Json.toJson(
+      m.map { case (groupId, accountIDs) => (groupId.toString, accountIDs.map(_.toString))}
+    )
+  }
   implicit val syncFormat = Json.format[GestaltOrgSync]
 
   implicit val basicAuthTokenFormat = Json.format[GestaltBasicCredsToken]
