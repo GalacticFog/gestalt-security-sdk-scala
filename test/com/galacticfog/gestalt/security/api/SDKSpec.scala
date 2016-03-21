@@ -340,34 +340,46 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, Seq(chld.getLink))
       val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
       val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
+      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir.id, false)
       val rootUrl = baseUrl + "/sync"
       val route = (GET, rootUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
           accounts = Seq( jane, john ),
-          orgs = Seq(root,chld)
+          groups = Seq( awayTeam ),
+          orgs = Seq(root,chld),
+          groupMembership = Map(awayTeam.id -> Seq(jane.id, john.id))
         )))
       })
       implicit val security = getSecurity(route)
       val rootSync = await(GestaltOrg.syncOrgTree(None, "username", "password"))
       rootSync.orgs must containAllOf(Seq(root,chld))
       rootSync.accounts must containAllOf(Seq(jane,john))
+      rootSync.groups must containAllOf(Seq(awayTeam))
+      rootSync.groupMembership must haveKey(awayTeam.id)
+      rootSync.groupMembership(awayTeam.id) must containAllOf(Seq(jane.id, john.id))
     }
 
     "support sync against suborg" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, Seq())
       val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
       val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
+      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir.id, false)
       val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
       val route = (GET, chldUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
           accounts = Seq(jane,john),
-          orgs = Seq(chld)
+          groups = Seq(awayTeam),
+          orgs = Seq(chld),
+          groupMembership = Map(awayTeam.id -> Seq(jane.id, john.id))
         )))
       })
       implicit val security = getSecurity(route)
       val subSync = await(GestaltOrg.syncOrgTree(Some(chld.id), "username", "password"))
       subSync.orgs must_== Seq(chld)
       subSync.accounts must containAllOf(Seq(jane,john))
+      subSync.groups must containAllOf(Seq(awayTeam))
+      subSync.groupMembership must haveKey(awayTeam.id)
+      subSync.groupMembership(awayTeam.id) must containAllOf(Seq(jane.id, john.id))
     }
 
     "return current org" in new TestParameters {
