@@ -94,7 +94,7 @@ case class GestaltAccountCreateWithRights(username: String,
                                           groups: Option[Seq[UUID]] = None,
                                           rights: Option[Seq[GestaltGrantCreate]] = None)
 
-case class GestaltGroup(id: UUID, name: String, directoryId: UUID, disabled: Boolean) extends GestaltResource {
+case class GestaltGroup(id: UUID, name: String, directory: GestaltDirectory, disabled: Boolean) extends GestaltResource {
   override val href: String = s"/groups/${id}"
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] =

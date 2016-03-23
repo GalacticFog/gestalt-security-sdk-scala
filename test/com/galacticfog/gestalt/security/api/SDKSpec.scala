@@ -340,7 +340,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, Seq(chld.getLink))
       val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
       val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
-      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir.id, false)
+      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir, false)
       val rootUrl = baseUrl + "/sync"
       val route = (GET, rootUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
@@ -363,7 +363,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, Seq())
       val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", "jdee@org", "", testDir)
       val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", "jdoe@chld.org", "", testDir)
-      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir.id, false)
+      val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", testDir, false)
       val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
       val route = (GET, chldUrl, Action {
         Ok(Json.toJson(GestaltOrgSync(
@@ -678,7 +678,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testUsername = "jdoe"
       val testPassword = "monkey"
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testDir.id, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directory = testDir, disabled = false)
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
@@ -702,7 +702,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add user with groups to an org" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directoryId = testDir.id, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", directory = testDir, disabled = false)
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
@@ -726,7 +726,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add group to an org" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testDir.id, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directory = testDir, disabled = false)
       val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
 
       val create = GestaltGroupCreateWithRights(
@@ -745,7 +745,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "add group to an org with auth override" in new TestParameters {
       implicit val security = mock[GestaltSecurityClient]
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directoryId = testDir.id, disabled = false)
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", directory = testDir, disabled = false)
       val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
       val testUsername = "jdoe"
       val testPassword = "monkey"
@@ -1028,7 +1028,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testGroup = GestaltGroup(
         name = "testGroup",
         id = UUID.randomUUID(),
-        directoryId = testDir.id,
+        directory = testDir,
         disabled = false
       )
       val url = baseUrl + s"/apps/${testApp.id}/groups/${testGroup.id}/rights"
