@@ -7,6 +7,7 @@ trait GestaltAuthToken {
   def toJson: JsValue
 }
 
+// TODO: this seems redundant with GesaltBasicCredentials
 case class GestaltBasicCredsToken(username: String, password: String) extends GestaltAuthToken {
   override def toJson: JsValue = Json.toJson(this)
 }

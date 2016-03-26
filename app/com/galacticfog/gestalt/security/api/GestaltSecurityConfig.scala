@@ -3,7 +3,6 @@ package com.galacticfog.gestalt.security.api
 import java.util.UUID
 
 import com.fasterxml.jackson.core.JsonParseException
-import com.galacticfog.gestalt.Gestalt
 import com.galacticfog.gestalt.io.ConfigEntityReader
 import com.galacticfog.gestalt.io.GestaltConfig.ConfigEntity
 import play.api.Logger
@@ -104,40 +103,15 @@ object GestaltSecurityConfig {
   val eAPPID    = "GESTALT_SECURITY_APPID"
 
   val eCONFIG     = "GESTALT_SECURITY_CONFIG"
-  val eHOME       = "GESTALT_HOME"
-  val eSEC_HOME   = "GESTALT_SECURITY_HOME"
-
 
   /**
    * Get the security config from the following sources, in the following order:
-   * 1) meta, via the supplied client if not None
-   * 2) environment variables
-   * 3) the filesystem
-   * @param meta
+   * 1) environment variables
+   * 2) the filesystem
    * @return Some(config) if a security configuration was found, None otherwise
    */
-  def getSecurityConfig(meta: Option[Gestalt]): Option[GestaltSecurityConfig] = {
-    getSecurityConfigFromMeta(meta) orElse getSecurityConfigFromEnvFile
-  }
-
-  def getSecurityConfigFromMeta(meta: Option[Gestalt]): Option[GestaltSecurityConfig] = {
-    for {
-      m <- {
-        Logger.info("> querying meta for named config 'authentication'")
-        meta
-      }
-      str <- Try { // might throw, so wrap it in a Try
-        val config = m.getConfig("authentication")
-        Logger.info("Attempted to get 'authentication' config from meta:" + Json.prettyPrint(m.local.context.get.toJson))
-        config match {
-          case Success(config) => Logger.info("Meta returned config: " + config)
-          case Failure(error)  => Logger.info("Meta returned error: " + error)
-        }
-        config
-      }.flatten.toOption
-      json <- Try(Json.parse(str)).toOption
-      config <- json.asOpt[GestaltSecurityConfig]
-    } yield config
+  def getSecurityConfig: Option[GestaltSecurityConfig] = {
+    getSecurityConfigFromEnv orElse getSecurityConfigFromFile
   }
 
   def getSecurityConfigFromEnv: Option[GestaltSecurityConfig] = {
@@ -178,10 +152,6 @@ object GestaltSecurityConfig {
     }
   }
 
-  def getSecurityConfigFromEnvFile: Option[GestaltSecurityConfig] = {
-    getSecurityConfigFromEnv orElse getSecurityConfigFromFile
-  }
-
   ///////////////////////////////////////////////////////////////////////////////////////////////////
   // private stuff
   ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -220,25 +190,8 @@ object GestaltSecurityConfig {
     else Success(config)
   }
 
-  private def resolveGestaltHome(home: String): Try[String] = {
-    import Res._
-    if (!exists(home)) {
-      Failure(error(ErrPathNotFound))
-    }
-    else if (!isDir(home)) {
-      Failure(error(ErrNotDirectory))
-    }
-    else {
-      if (exists(confname(home))) Success(confname(home))
-      else if (exists(confname(home, "conf"))) Success(confname(home, "conf"))
-      else Failure(error(ErrConfigNotFound))
-    }
-  }
-
   private def resolvePath: Try[String] = {
     if (getEnv( eCONFIG ).isDefined)        resolveGestaltConfig(getEnv( eCONFIG ).get)
-    else if (getEnv( eHOME ).isDefined)     resolveGestaltHome(getEnv( eHOME ).get)
-    else if (getEnv( eSEC_HOME ).isDefined) resolveGestaltHome(getEnv( eSEC_HOME ).get)
     else if (exists(confname( curdir )))    Success(confname(curdir))
     else Failure(error(Res.ErrGestaltConfigNotFound, None))
   }

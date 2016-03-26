@@ -35,11 +35,9 @@ object PatchSupport {
 
   def updateImpl[A: ClassTag](orig: A, elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A], typeTag: ru.TypeTag[A]): Future[A] = {
     val patches = genPatch[A](orig, elems:_*)
-    client.patchWithAuth[A](
+    client.patch[A](
       orig.asInstanceOf[GestaltResource].href,
-      Json.toJson(patches),
-      username = client.apiKey,
-      password = client.apiSecret
+      Json.toJson(patches)
     )
   }
 

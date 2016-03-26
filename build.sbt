@@ -2,7 +2,7 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "2.0.0-SNAPSHOT"
+version := "2.1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -21,13 +21,13 @@ credentials ++= {
     password <- sys.env.get("GESTALT_RESOLVER_PASSWORD")
   } yield {
     Seq(Credentials(realm, resolverUrl.getHost, username, password))
-  }) getOrElse(Seq())
+  }) getOrElse Seq()
 }
 
 resolvers ++= {
   sys.env.get("GESTALT_RESOLVER_URL") map {
     url => Seq("gestalt-resolver" at url)
-  } getOrElse(Seq())
+  } getOrElse Seq()
 }
 
 libraryDependencies += "com.galacticfog" %% "gestalt-io" % "1.0.4"

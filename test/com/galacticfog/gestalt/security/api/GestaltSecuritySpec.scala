@@ -56,26 +56,27 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       val port = 1234
       val apiKey = "someKey"
       val apiSecret = "someSecret"
+      val basicCreds = GestaltBasicCredentials(apiKey,apiSecret)
       val security = GestaltSecurityClient(wsclient,HTTP,hostname,port,apiKey,apiSecret)
     }
 
     "use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
-      await(security.getJson("/",apiKey,apiSecret))
+      await(security.getJson("/",basicCreds))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
-      await(security.deleteJson("/",apiKey,apiSecret))
+      await(security.deleteJson("/",basicCreds))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
-      await(security.postJson("/",apiKey,apiSecret))
+      await(security.postJson("/",basicCreds))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
     "use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
-      await(security.postJson("/",Json.obj(),apiKey,apiSecret))
+      await(security.postJson("/",Json.obj(),basicCreds))
       there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
     }
 
