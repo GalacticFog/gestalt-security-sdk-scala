@@ -45,7 +45,7 @@ final case class ValidTokenResponse(
   exp: Long,
   iat: Long,
   jti: UUID,
-  gestalt_org_id: String,
+  gestalt_org_id: UUID,
   gestalt_token_href: String,
   gestalt_account: GestaltAccount,
   gestalt_groups: Seq[GestaltGroup],
