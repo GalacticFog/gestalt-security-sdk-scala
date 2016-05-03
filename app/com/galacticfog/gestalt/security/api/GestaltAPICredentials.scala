@@ -27,6 +27,8 @@ object GestaltAPICredentials {
       }
       case Array("Bearer", token) =>
         Some(GestaltBearerCredentials(token))
+      case Array(s) if s.startsWith("token=") =>
+        Some(GestaltBearerCredentials(s.stripPrefix("token=")))
       case _ => None
     }
   }

@@ -106,6 +106,12 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       GestaltAPICredentials.getCredentials(authHeader) must beSome(creds)
     }
 
+    "decode dcos token authentication" in {
+      val creds = GestaltBearerCredentials("some_token")
+      val authHeader = "token=" + creds.headerValue
+      GestaltAPICredentials.getCredentials(authHeader) must beSome(creds)
+    }
+
     "return null on improperly formatted auth headers" in {
       GestaltAPICredentials.getCredentials("badstring") must beNone
     }
