@@ -61,7 +61,9 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       val port = 1234
       val apiKey = "someKey"
       val apiSecret = "someSecret"
+      val someToken = "some.token"
       val basicCreds = GestaltBasicCredentials(apiKey,apiSecret)
+      val tokenCreds = GestaltBearerCredentials(someToken)
       val security = GestaltSecurityClient(wsclient,HTTP,hostname,port,apiKey,apiSecret)
     }
 
@@ -69,46 +71,65 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       override def matches(argument: scala.Any): Boolean = ???
     }
 
-    "use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
+    "properly use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
       await(security.getJson("/",basicCreds))
-//      there was one(testHolder).withAuth(Matchers.eq(apiKey), Matchers.eq(apiSecret), Matchers.any[WSAuthScheme])
-      there was one(testHolder).withHeaders("Basic" -> basicCreds.headerValue)
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
-    "use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
+    "properly use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
       await(security.deleteJson("/",basicCreds))
-      there was one(testHolder).withHeaders("Basic" -> basicCreds.headerValue)
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
-    "use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
+    "properly use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
       await(security.postJson("/",basicCreds))
-      there was one(testHolder).withHeaders("Basic" -> basicCreds.headerValue)
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
-    "use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
+    "properly use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
       await(security.postJson("/",Json.obj(),basicCreds))
-      there was one(testHolder).withHeaders("Basic" -> basicCreds.headerValue)
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
+    }
+
+    "properly use token for authentication on GET" in new FullyMockedWSClient {
+      await(security.getJson("/",tokenCreds))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "properly use token for authentication on DELETE" in new FullyMockedWSClient {
+      await(security.deleteJson("/",tokenCreds))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "properly use token for authentication on POST(empty)" in new FullyMockedWSClient {
+      await(security.postJson("/",tokenCreds))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "properly use token for authentication on POST(body)" in new FullyMockedWSClient {
+      await(security.postJson("/",Json.obj(),tokenCreds))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
     "consistently encode and decode Basic authorization" in {
       val creds = GestaltBasicCredentials("root", "letmein")
       GestaltAPICredentials.getCredentials(
-        "Basic " + creds.headerValue
+        creds.headerValue
       ) must beSome(creds)
       GestaltAPICredentials.getCredentials(
-        "Basic " + creds.headerValue + " Realm(test.com)"
+        creds.headerValue + " Realm(test.com)"
       ) must beSome(creds)
     }
 
     "consistently encode and decode Bearer authorization" in {
       val creds = GestaltBearerCredentials("some_token")
-      val authHeader = "Bearer " + creds.headerValue
+      val authHeader = creds.headerValue
       GestaltAPICredentials.getCredentials(authHeader) must beSome(creds)
     }
 
     "decode dcos token authentication" in {
       val creds = GestaltBearerCredentials("some_token")
-      val authHeader = "token=" + creds.headerValue
+      val authHeader = "token=" + creds.token
       GestaltAPICredentials.getCredentials(authHeader) must beSome(creds)
     }
 

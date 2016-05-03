@@ -9,10 +9,10 @@ sealed trait GestaltAPICredentials {
   def headerValue: String
 }
 final case class GestaltBearerCredentials(token: String) extends GestaltAPICredentials {
-  override def headerValue: String = token
+  override def headerValue: String = "Bearer " + token
 }
 final case class GestaltBasicCredentials(username: String, password: String) extends GestaltAPICredentials {
-  override def headerValue: String = Base64.getEncoder.encodeToString( (username + ":" + password).getBytes )
+  override def headerValue: String = "Basic " + Base64.getEncoder.encodeToString( (username + ":" + password).getBytes )
 }
 
 object GestaltAPICredentials {

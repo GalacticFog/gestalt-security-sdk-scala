@@ -138,8 +138,8 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
   }
 
   private def addAuth(rh: WSRequestHolder, creds: GestaltAPICredentials) = creds match {
-    case basic: GestaltBasicCredentials  => rh.withHeaders("Basic" -> creds.headerValue)
-    case basic: GestaltBearerCredentials => rh // TODO: FINISH AFTER TESTING
+    case basic: GestaltBasicCredentials  => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
+    case basic: GestaltBearerCredentials => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
   }
 
   private def genRequest(sendingJson: Boolean, endpoint: String, creds: GestaltAPICredentials): WSRequestHolder = {
