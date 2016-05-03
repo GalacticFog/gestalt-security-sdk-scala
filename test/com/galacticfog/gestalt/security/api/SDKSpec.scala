@@ -79,7 +79,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       "iat" -> Instant.now.getEpochSecond,
       "jti" -> testToken.id,
       "gestalt_token_href" -> testToken.href,
-      "gestalt_rights" -> Json.arr()
+      "gestalt_rights" -> Json.arr(),
+      "gestalt_groups" -> Json.arr(),
+      "gestalt_account" -> Json.toJson(testAccount),
+      "gestalt_org_id" -> testOrg.id.toString
     ).as[ValidTokenResponse]
 
     val testTokenAuthResponse = Json.obj(
