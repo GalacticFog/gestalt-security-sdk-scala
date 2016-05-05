@@ -202,6 +202,12 @@ case object GestaltOrg {
     ))
   }
 
+  def validateToken(token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"oauth/inspect", Map(
+      "token" -> token.toString
+    ))
+  }
+
   def authorizeFrameworkUser(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
     client.postWithAuth[GestaltAuthResponse](s"auth", creds)
       .map(Option.apply)

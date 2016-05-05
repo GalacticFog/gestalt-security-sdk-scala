@@ -435,6 +435,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       resp must beNone
     }
 
+    "globally introspect valid token on server" in new TestParameters {
+      val url = baseUrl + s"/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(testValidTokenResponse))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testToken))
+      resp must beAnInstanceOf[ValidTokenResponse]
+    }
+
     "introspect valid token on server against fqon" in new TestParameters {
       val url = baseUrl + s"/${testOrg.fqon}/oauth/inspect"
       val route = (POST, url, Action { request =>
