@@ -599,7 +599,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "create a directory" in new TestParameters {
-      val createRequest = GestaltDirectoryCreate(testDir.name, Some(testDir.description), config = None)
+      val createRequest = GestaltDirectoryCreate(testDir.name, "INTERNAL", Some(testDir.description), config = None)
       val url = baseUrl + s"/orgs/${testOrg.id}/directories"
       val route = (POST, url, Action { request =>
         request.body.asJson match {

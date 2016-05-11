@@ -11,7 +11,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 import scala.concurrent.ExecutionContext.Implicits.global
 import errors._
 
-case class GestaltDirectoryCreate(name: String, description: Option[String], config: Option[JsValue])
+case class GestaltDirectoryCreate(name: String, directoryType: String, description: Option[String], config: Option[JsValue])
 
 case class GestaltDirectory(id: UUID, name: String, description: String, orgId: UUID) extends GestaltResource {
   override val href: String = s"/directories/${id}"
