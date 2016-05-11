@@ -45,8 +45,8 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
     GestaltDirectory.listGroups(id)
   }
 
-  def listGroups(username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    GestaltDirectory.listGroups(id, username, password)
+  def listGroups(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltDirectory.listGroups(id, creds)
   }
 
 }
@@ -91,8 +91,8 @@ object GestaltDirectory {
     client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups")
   }
 
-  def listGroups(directoryId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.getWithAuth[Seq[GestaltGroup]](s"directories/${directoryId}/groups",username, password)
+  def listGroups(directoryId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getWithAuth[Seq[GestaltGroup]](s"directories/${directoryId}/groups", creds)
   }
 
   def createAccount(directoryId: UUID, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {

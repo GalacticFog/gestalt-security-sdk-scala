@@ -79,7 +79,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       "iat" -> Instant.now.getEpochSecond,
       "jti" -> testToken.id,
       "gestalt_token_href" -> testToken.href,
-      "gestalt_rights" -> Json.arr()
+      "gestalt_rights" -> Json.arr(),
+      "gestalt_groups" -> Json.arr(),
+      "gestalt_account" -> Json.toJson(testAccount),
+      "gestalt_org_id" -> testOrg.id.toString
     ).as[ValidTokenResponse]
 
     val testTokenAuthResponse = Json.obj(
@@ -231,8 +234,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "handle leading slash and no leading slash" in new TestParameters {
       val route = (GET, baseUrl + "/something", Action{Ok(Json.obj())} )
       val security = getSecurity(route)
-      await(security.getJson("/something","","")).toString() must_== "{}"
-      await(security.getJson("something","","")).toString() must_== "{}"
+      await(security.getJson("/something",GestaltBasicCredentials("",""))).toString() must_== "{}"
+      await(security.getJson("something",GestaltBasicCredentials("",""))).toString() must_== "{}"
     }
 
     "handle failed API authentication with an exception" in new TestParameters {
@@ -249,7 +252,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + "/dummy"
       val route = (GET,url, Action { NoContent })
       val security = getSecurity(route)
-      val jsonTry = security.getJson("dummy","","")
+      val jsonTry = security.getJson("dummy",GestaltBasicCredentials("",""))
       await(jsonTry) must throwAn[APIParseException]
     }
 
@@ -351,7 +354,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         )))
       })
       implicit val security = getSecurity(route)
-      val rootSync = await(GestaltOrg.syncOrgTree(None, "username", "password"))
+      val rootSync = await(GestaltOrg.syncOrgTree(None, GestaltBasicCredentials("username", "password")))
       rootSync.orgs must containAllOf(Seq(root,chld))
       rootSync.accounts must containAllOf(Seq(jane,john))
       rootSync.groups must containAllOf(Seq(awayTeam))
@@ -374,7 +377,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         )))
       })
       implicit val security = getSecurity(route)
-      val subSync = await(GestaltOrg.syncOrgTree(Some(chld.id), "username", "password"))
+      val subSync = await(GestaltOrg.syncOrgTree(Some(chld.id), GestaltBasicCredentials("username", "password")))
       subSync.orgs must_== Seq(chld)
       subSync.accounts must containAllOf(Seq(jane,john))
       subSync.groups must containAllOf(Seq(awayTeam))
@@ -430,6 +433,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getSecurity(route)
       val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
       resp must beNone
+    }
+
+    "globally introspect valid token on server" in new TestParameters {
+      val url = baseUrl + s"/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) => Ok(Json.toJson(testValidTokenResponse))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testToken))
+      resp must beAnInstanceOf[ValidTokenResponse]
     }
 
     "introspect valid token on server against fqon" in new TestParameters {
@@ -508,8 +524,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = mock[GestaltSecurityClient]
       val testUsername = "jdoe"
       val testPassword = "monkey"
-      security.delete(s"orgs/${testOrg.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
-      val deleted = await(GestaltOrg.deleteOrg(testOrg.id,testUsername,testPassword))
+      security.delete(s"orgs/${testOrg.id}", GestaltBasicCredentials(testUsername, testPassword)) returns Future.successful(DeleteResult(true))
+      val deleted = await(GestaltOrg.deleteOrg(testOrg.id,GestaltBasicCredentials(testUsername,testPassword)))
       deleted must beTrue
     }
 
@@ -614,8 +630,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val createRequest = GestaltOrgCreate(testOrg.name, true)
       implicit val security = mock[GestaltSecurityClient]
-      security.postWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), testUsername, testPassword) returns Future{testOrg}
-      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name, testUsername, testPassword))
+      security.postWithAuth[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), GestaltBasicCredentials(testUsername, testPassword)) returns Future{testOrg}
+      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest.name, GestaltBasicCredentials(testUsername, testPassword)))
       newOrg must_== testOrg
     }
 
@@ -625,15 +641,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, testPassword) returns
+      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", GestaltBasicCredentials(testUsername, testPassword)) returns
         Future{authResponse}
-      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", testUsername, "wrongPassword") returns
+      security.postWithAuth[GestaltAuthResponse](s"${testOrg.fqon}/auth", GestaltBasicCredentials(testUsername, "wrongPassword")) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.fqon, testUsername, testPassword) )
+      val goodResponse: Option[GestaltAuthResponse] = await(
+        GestaltOrg.authorizeFrameworkUser(testOrg.fqon, GestaltBasicCredentials(testUsername, testPassword))
+      )
       goodResponse must beSome(authResponse)
 
-      val failResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.fqon, testUsername, "wrongPassword") )
+      val failResponse: Option[GestaltAuthResponse] = await(
+        GestaltOrg.authorizeFrameworkUser(testOrg.fqon, GestaltBasicCredentials(testUsername, "wrongPassword"))
+      )
       failResponse must beNone
     }
 
@@ -643,15 +663,15 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testPassword = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, testPassword) returns
+      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", GestaltBasicCredentials(testUsername, testPassword)) returns
         Future{authResponse}
-      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", testUsername, "wrongPassword") returns
+      security.postWithAuth[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", GestaltBasicCredentials(testUsername, "wrongPassword")) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, testUsername, testPassword) )
+      val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, GestaltBasicCredentials(testUsername, testPassword)) )
       goodResponse must beSome(authResponse)
 
-      val failResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, testUsername, "wrongPassword") )
+      val failResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testOrg.id, GestaltBasicCredentials(testUsername, "wrongPassword")) )
       failResponse must beNone
     }
 
@@ -661,15 +681,15 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testSecret = "monkey"
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postWithAuth[GestaltAuthResponse](s"auth", testKey, testSecret) returns
+      security.postWithAuth[GestaltAuthResponse](s"auth", GestaltBasicCredentials(testKey, testSecret)) returns
         Future{authResponse}
-      security.postWithAuth[GestaltAuthResponse](s"auth", testKey, "wrongSecret") returns
+      security.postWithAuth[GestaltAuthResponse](s"auth", GestaltBasicCredentials(testKey, "wrongSecret")) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testKey, testSecret) )
+      val goodResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(GestaltBasicCredentials(testKey, testSecret)) )
       goodResponse must beSome(authResponse)
 
-      val failResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(testKey, "wrongSecret") )
+      val failResponse: Option[GestaltAuthResponse] = await(GestaltOrg.authorizeFrameworkUser(GestaltBasicCredentials(testKey, "wrongSecret")) )
       failResponse must beNone
     }
 
@@ -691,10 +711,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         credential = GestaltPasswordCredential("joe's password")
       )
 
-      security.postWithAuth[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create), testUsername, testPassword) returns
+      security.postWithAuth[GestaltAccount](s"orgs/${testOrg.id}/accounts", Json.toJson(create), GestaltBasicCredentials(testUsername, testPassword)) returns
         Future{testAccount}
 
-      val newAccount = await(GestaltOrg.createAccount(testOrg.id, create, testUsername, testPassword))
+      val newAccount = await(GestaltOrg.createAccount(testOrg.id, create, GestaltBasicCredentials(testUsername, testPassword)))
 
       newAccount must_== testAccount
     }
@@ -755,10 +775,10 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
-      security.postWithAuth[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create), testUsername, testPassword) returns
+      security.postWithAuth[GestaltGroup](s"orgs/${testOrg.id}/groups", Json.toJson(create), GestaltBasicCredentials(testUsername, testPassword)) returns
         Future{testGroup}
 
-      val newGroup = await(GestaltOrg.createGroup(testOrg.id, create, testUsername, testPassword))
+      val newGroup = await(GestaltOrg.createGroup(testOrg.id, create, GestaltBasicCredentials(testUsername, testPassword)))
 
       newGroup must_== testGroup
     }
@@ -771,8 +791,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testUsername = "jdoe"
       val testPassword = "monkey"
       implicit val security = mock[GestaltSecurityClient]
-      security.delete(s"accounts/${testAccount.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
-      await(GestaltAccount.deleteAccount(testAccount.id, testUsername, testPassword)) must beTrue
+      security.delete(s"accounts/${testAccount.id}", GestaltBasicCredentials(testUsername, testPassword)) returns Future.successful(DeleteResult(true))
+      await(GestaltAccount.deleteAccount(testAccount.id, GestaltBasicCredentials(testUsername, testPassword))) must beTrue
     }
 
   }
@@ -787,8 +807,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testUsername = "jdoe"
       val testPassword = "monkey"
       implicit val security = mock[GestaltSecurityClient]
-      security.delete(s"apps/${testApp.id}", testUsername, testPassword) returns Future.successful(DeleteResult(true))
-      await(GestaltApp.deleteApp(testApp.id, testUsername, testPassword)) must beTrue
+      security.delete(s"apps/${testApp.id}", GestaltBasicCredentials(testUsername, testPassword)) returns Future.successful(DeleteResult(true))
+      await(GestaltApp.deleteApp(testApp.id, GestaltBasicCredentials(testUsername, testPassword))) must beTrue
     }
 
     "list all accounts" in new TestParameters {
