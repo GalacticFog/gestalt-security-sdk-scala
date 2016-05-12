@@ -3,15 +3,23 @@ package com.galacticfog.gestalt.security.api
 import java.util.UUID
 
 import com.galacticfog.gestalt.security.api.errors.ResourceNotFoundException
-import play.api.libs.json.{JsValue, JsObject, Json}
+import play.api.libs.json._
 
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
 import com.galacticfog.gestalt.security.api.json.JsonImports._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import errors._
 
-case class GestaltDirectoryCreate(name: String, description: Option[String], config: Option[JsValue])
+sealed trait DirectoryType {
+  def label: String
+}
+
+final case object DIRECTORY_TYPE_INTERNAL extends DirectoryType { val label = "INTERNAL" }
+final case object DIRECTORY_TYPE_LDAP extends DirectoryType { val label = "LDAP" }
+
+case class GestaltDirectoryCreate(name: String, directoryType: DirectoryType, description: Option[String], config: Option[JsValue])
 
 case class GestaltDirectory(id: UUID, name: String, description: String, orgId: UUID) extends GestaltResource {
   override val href: String = s"/directories/${id}"
@@ -98,5 +106,4 @@ object GestaltDirectory {
   def createAccount(directoryId: UUID, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"directories/${directoryId}/accounts",Json.toJson(create))
   }
-
 }
