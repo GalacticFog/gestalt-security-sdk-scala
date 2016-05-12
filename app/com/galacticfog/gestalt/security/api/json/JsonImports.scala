@@ -19,6 +19,21 @@ object JsonImports {
   // Resources
   ///////////////////////////////////////////////////////////////////////////
 
+  val directoryTypeReads = new Reads[DirectoryType] {
+    override def reads(json: JsValue): JsResult[DirectoryType] = json match {
+      case JsString(v) if v.toUpperCase == "INTERNAL" => JsSuccess(DIRECTORY_TYPE_INTERNAL)
+      case JsString(v) if v.toUpperCase == "LDAP" => JsSuccess(DIRECTORY_TYPE_LDAP)
+      case _ => JsError("invalid DirectoryType")
+    }
+  }
+
+  val directoryTypeWrites = new Writes[DirectoryType] {
+    override def writes(o: DirectoryType): JsValue = JsString(o.label)
+  }
+
+  implicit val directoryTypeFormat = Format[DirectoryType](directoryTypeReads, directoryTypeWrites)
+
+
   val storeTypeReads = new Reads[GestaltAccountStoreType] {
     override def reads(json: JsValue): JsResult[GestaltAccountStoreType] = json match {
       case JsString(v) if v.toUpperCase == DIRECTORY.label => JsSuccess(DIRECTORY)

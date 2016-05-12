@@ -18,3 +18,5 @@ tmp
 /.worksheet/
 *.cache
 
+gestalt-security-sdk-scala.ipr
+gestalt-security-sdk-scala.iws
