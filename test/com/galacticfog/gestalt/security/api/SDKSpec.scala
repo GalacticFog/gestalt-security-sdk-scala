@@ -880,6 +880,14 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       ) must containTheSameElementsAs(updatedAccountList)
     }
 
+    "delete groups" in new TestParameters {
+      implicit val security = getMockSecurity
+
+      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
+      security.deleteDR(s"groups/${testGroup.id}", Some(testOverrideCreds)) returns Future.successful(DeleteResult(true))
+      await(GestaltGroup.deleteGroup(testGroup.id, Some(testOverrideCreds))) must beTrue
+    }
+
   }
 
   "GestaltAccount" should {
