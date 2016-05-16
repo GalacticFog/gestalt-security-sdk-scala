@@ -15,6 +15,7 @@ abstract class GestaltResource {
   def id: UUID
   def name: String
   def href: String
+  def description: Option[String]
 
   def getLink(): ResourceLink = ResourceLink(id = id, name = name, href = href, properties = None)
 }

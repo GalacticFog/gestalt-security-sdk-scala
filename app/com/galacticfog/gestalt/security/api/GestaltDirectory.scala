@@ -21,7 +21,8 @@ final case object DIRECTORY_TYPE_LDAP extends DirectoryType { val label = "LDAP"
 
 case class GestaltDirectoryCreate(name: String, directoryType: DirectoryType, description: Option[String], config: Option[JsValue])
 
-case class GestaltDirectory(id: UUID, name: String, description: String, orgId: UUID) extends GestaltResource {
+case class GestaltDirectory(id: UUID, name: String, description: Option[String], orgId: UUID) extends GestaltResource {
+
   override val href: String = s"/directories/${id}"
 
   def createAccount(create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
@@ -45,15 +46,11 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
     listAccounts()
   }
 
-  def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    GestaltDirectory.listAccounts(id)
+  def listAccounts(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    GestaltDirectory.listAccounts(id, creds)
   }
 
-  def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    GestaltDirectory.listGroups(id)
-  }
-
-  def listGroups(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+  def listGroups(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     GestaltDirectory.listGroups(id, creds)
   }
 
@@ -62,7 +59,7 @@ case class GestaltDirectory(id: UUID, name: String, description: String, orgId: 
 object GestaltDirectory {
 
   def deleteDirectory(dirId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"directories/${dirId}") map { _.wasDeleted }
+    client.deleteDR(s"directories/${dirId}") map { _.wasDeleted }
   }
 
   def createGroup(dirId: UUID, create: GestaltGroupCreate)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
@@ -95,12 +92,13 @@ object GestaltDirectory {
     client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts")
   }
 
-  def listGroups(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups")
+  def listAccounts(directoryId: UUID, creds: Option[GestaltAPICredentials] = None)
+                  (implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts", creds)
   }
 
-  def listGroups(directoryId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.getWithAuth[Seq[GestaltGroup]](s"directories/${directoryId}/groups", creds)
+  def listGroups(directoryId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups", creds)
   }
 
   def createAccount(directoryId: UUID, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {

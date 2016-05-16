@@ -12,7 +12,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 
 case class GestaltAppCreate(name: String)
 
-case class GestaltApp(id: UUID, name: String, orgId: UUID, isServiceApp: Boolean) extends GestaltResource {
+case class GestaltApp(id: UUID, name: String, description: Option[String], orgId: UUID, isServiceApp: Boolean) extends GestaltResource {
   override val href: String = s"/apps/${id}"
 
   def getGrant(username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltRightGrant]] = {
@@ -129,8 +129,8 @@ case object GestaltApp {
     client.getOpt[GestaltAccount](s"apps/${appId}/usernames/${username}")
   }
 
-  def deleteApp(appId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"apps/${appId}", creds) map { _.wasDeleted }
+  def deleteApp(appId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"apps/${appId}", creds) map { _.wasDeleted }
   }
 
   def authorizeUser(appId: UUID, creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
@@ -140,7 +140,7 @@ case object GestaltApp {
         Logger.warn("GestaltApp.authorizeUser(): caught UnauthorziedAPIException; this is likely because the GestaltSecurityClient is misconfigured with invalid credentials.")
         Future.failed(authc)
       case authz: ForbiddenAPIException =>
-        Logger.warn("GestaltApp.authorizeUser(): caught ForbiddenAPIException; the credentials provided ot the GestaltSecurityClient do not have appropriate permissions for authorizing users against this application.")
+        Logger.warn("GestaltApp.authorizeUser(): caught ForbiddenAPIException; the credentials provided to the GestaltSecurityClient do not have appropriate permissions for authorizing users against this application.")
         Future.failed(authz)
     }
   }
@@ -186,7 +186,7 @@ case object GestaltApp {
   }
 
   def deleteGrant(appId: UUID, username: String, grantName: String)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"apps/${appId}/usernames/${username}/rights/${grantName}") map {_.wasDeleted}
+    client.deleteDR(s"apps/${appId}/usernames/${username}/rights/${grantName}") map {_.wasDeleted}
   }
 
   def listAccountGrantsByUsername(appId: UUID, username: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {

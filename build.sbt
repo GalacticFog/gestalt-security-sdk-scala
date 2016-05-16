@@ -4,9 +4,31 @@ organization := "com.galacticfog"
 
 version := "2.1.1-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).
+  enablePlugins(PlayScala).
+  enablePlugins(BuildInfoPlugin).
+  settings(
+    buildInfoKeys := Seq[BuildInfoKey](
+      name, version, scalaVersion, sbtVersion,
+      "builtBy" -> System.getProperty("user.name"),
+      "gitHash" -> new java.lang.Object(){
+              override def toString(): String = {
+                      try { 
+                    val extracted = new java.io.InputStreamReader(
+                              java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())                         
+                    (new java.io.BufferedReader(extracted)).readLine()
+                      } catch {      case t: Throwable => "get git hash failed"    }
+              }}.toString()
+    ),
+    buildInfoPackage := "com.galacticfog.gestalt.security.sdk"
+  )
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
+
+scalacOptions ++= Seq(
+  "-unchecked", "-deprecation", "-feature",
+  "-language:postfixOps", "-language:implicitConversions"
+)
 
 resolvers ++= Seq(
   "snapshots" at "http://scala-tools.org/repo-snapshots",

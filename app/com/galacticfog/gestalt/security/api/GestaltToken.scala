@@ -12,6 +12,7 @@ trait GestaltToken extends GestaltResource {
   override def name: String = tokenType match {
     case ACCESS_TOKEN => s"accessToken-${id}"
   }
+  override def description = None
 }
 
 object GestaltToken {
