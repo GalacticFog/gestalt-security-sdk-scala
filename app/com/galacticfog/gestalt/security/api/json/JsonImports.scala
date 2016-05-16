@@ -107,17 +107,7 @@ object JsonImports {
   implicit val groupCreateRequestWithRights = Json.format[GestaltGroupCreateWithRights]
   implicit val orgAccountStoreMappingCreateRequest = Json.format[GestaltAccountStoreMappingCreate]
   implicit val appCreateRequest = Json.format[GestaltAppCreate]
-  implicit val orgCreateRequestWrite = Json.writes[GestaltOrgCreate]
-  val orgCreateRequestReadV2 = Json.reads[GestaltOrgCreate]
-  implicit val orgCreateRequestReads = new Reads[GestaltOrgCreate] {
-    override def reads(json: JsValue): JsResult[GestaltOrgCreate] = {
-      lazy val v1 = (json \ "orgName").asOpt[String] map {n => GestaltOrgCreate(name = n, createDefaultUserGroup = false)}
-      json.asOpt[GestaltOrgCreate](orgCreateRequestReadV2) orElse v1 match {
-        case Some(c) => JsSuccess(c)
-        case None => JsError("could not parse GestaltOrgCreate")
-      }
-    }
-  }
+  implicit val orgCreateRequest = Json.format[GestaltOrgCreate]
   implicit val dirCreateRequest = Json.format[GestaltDirectoryCreate]
 
   val tokenTypeReads = new Reads[AccessTokenResponse.TokenType] {

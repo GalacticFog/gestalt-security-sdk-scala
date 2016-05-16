@@ -642,7 +642,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "create a new org" in new TestParameters {
       implicit val security = getMockSecurity
       val parent = UUID.randomUUID()
-      val createRequest = GestaltOrgCreate(testOrg.name, true)
+      val createRequest = GestaltOrgCreate(testOrg.name, true, None)
       security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), None) returns Future.successful(testOrg)
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest))
       newOrg must_== testOrg
@@ -651,7 +651,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "create a new org with auth override" in new TestParameters {
       implicit val security = getMockSecurity
       val parent = UUID.randomUUID()
-      val createRequest = GestaltOrgCreate(testOrg.name, true)
+      val createRequest = GestaltOrgCreate(testOrg.name, true, None)
       security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), Some(testOverrideCreds)) returns Future.successful(testOrg)
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest, Some(testOverrideCreds)))
       newOrg must_== testOrg
@@ -710,6 +710,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
+        description = None,
         firstName = testAccount.firstName,
         lastName = testAccount.lastName,
         email = testAccount.email,
@@ -736,6 +737,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltAccountCreateWithRights(
         username = testAccount.username,
+        description = None,
         firstName = testAccount.firstName,
         lastName = testAccount.lastName,
         email = testAccount.email,
@@ -761,6 +763,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
+        description = None,
         rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
@@ -783,6 +786,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
+        description = None,
         rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
       )
 
@@ -963,6 +967,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "allow account creation" in new TestParameters {
       val createRequest = GestaltAccountCreateWithRights(
         username = testAccount.username,
+        description = None,
         firstName = testAccount.firstName,
         lastName = testAccount.lastName,
         email = testAccount.email,
@@ -1256,6 +1261,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "create account" in new TestParameters {
       val createRequest = GestaltAccountCreate(
         username = testAccount.username,
+        description = None,
         firstName = testAccount.firstName,
         lastName = testAccount.lastName,
         email = testAccount.email,
@@ -1310,6 +1316,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "create user failure returns failed try" in new TestParameters {
       val createRequest = GestaltAccountCreate(
         username = "",
+        description = None,
         firstName = "",
         lastName = "",
         email = "",

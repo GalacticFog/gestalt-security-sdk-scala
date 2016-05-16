@@ -72,6 +72,7 @@ case object GestaltAccount {
 }
 
 case class GestaltAccountCreate(username: String,
+                                description: Option[String],
                                 firstName: String,
                                 lastName: String,
                                 email: String,
@@ -80,6 +81,7 @@ case class GestaltAccountCreate(username: String,
                                 credential: GestaltAccountCredential)
 
 case class GestaltAccountUpdate(username: Option[String],
+                                description: Option[String],
                                 email: Option[String],
                                 phoneNumber: Option[String],
                                 credential: Option[GestaltAccountCredential],
@@ -87,6 +89,7 @@ case class GestaltAccountUpdate(username: Option[String],
                                 lastName: Option[String])
 
 case class GestaltAccountCreateWithRights(username: String,
+                                          description: Option[String],
                                           firstName: String,
                                           lastName: String,
                                           email: String,
@@ -107,10 +110,12 @@ case class GestaltGroup(id: UUID, name: String, description: Option[String], dir
   }
 }
 
-case class GestaltGroupCreate(name: String)
+case class GestaltGroupCreate(name: String,
+                              description: Option[String])
 
 
 case class GestaltGroupCreateWithRights(name: String,
+                                        description: Option[String],
                                         rights: Option[Seq[GestaltGrantCreate]] = None)
 
 case object GestaltGroup {
