@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.galacticfog.gestalt.security.api.json.JsonImports._
 
-case class GestaltAppCreate(name: String)
+case class GestaltAppCreate(name: String, description: Option[String] = None)
 
 case class GestaltApp(id: UUID, name: String, description: Option[String], orgId: UUID, isServiceApp: Boolean) extends GestaltResource {
   override val href: String = s"/apps/${id}"
