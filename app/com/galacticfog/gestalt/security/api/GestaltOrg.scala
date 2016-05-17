@@ -89,7 +89,7 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
 
 case class GestaltOrgSync(orgs: Seq[GestaltOrg], accounts: Seq[GestaltAccount], groups: Seq[GestaltGroup])
 
-case class GestaltOrgCreate(name: String, createDefaultUserGroup: Boolean, description: Option[String] = None)
+case class GestaltOrgCreate(name: String, createDefaultUserGroup: Boolean = true, description: Option[String] = None)
 
 case object GestaltOrg {
 

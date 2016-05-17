@@ -648,6 +648,11 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       newOrg must_== testOrg
     }
 
+    "create new org with default args will create a user group" in new TestParameters {
+      val createRequest = GestaltOrgCreate("some-name")
+      createRequest.createDefaultUserGroup must beTrue
+    }
+
     "create a new org with auth override" in new TestParameters {
       implicit val security = getMockSecurity
       val parent = UUID.randomUUID()
