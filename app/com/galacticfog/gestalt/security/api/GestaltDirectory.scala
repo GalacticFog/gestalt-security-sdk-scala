@@ -19,7 +19,7 @@ sealed trait DirectoryType {
 final case object DIRECTORY_TYPE_INTERNAL extends DirectoryType { val label = "INTERNAL" }
 final case object DIRECTORY_TYPE_LDAP extends DirectoryType { val label = "LDAP" }
 
-case class GestaltDirectoryCreate(name: String, directoryType: DirectoryType, description: Option[String], config: Option[JsValue])
+case class GestaltDirectoryCreate(name: String, directoryType: DirectoryType, description: Option[String] = None, config: Option[JsValue] = None)
 
 case class GestaltDirectory(id: UUID, name: String, description: Option[String], orgId: UUID) extends GestaltResource {
 
