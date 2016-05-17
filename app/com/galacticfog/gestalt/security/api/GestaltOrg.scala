@@ -23,8 +23,8 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
   def createApp(createRequest: GestaltAppCreate)(implicit client: GestaltSecurityClient): Future[GestaltApp] =
     GestaltOrg.createApp(id, createRequest)
 
-  def createSubOrg(create: GestaltOrgCreate, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltOrg] =
-    GestaltOrg.createSubOrg(id, create, creds)
+  def createSubOrg(create: GestaltOrgCreate)(implicit client: GestaltSecurityClient): Future[GestaltOrg] =
+    GestaltOrg.createSubOrg(id, create)
 
   def getAppByName(appName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
     GestaltOrg.getAppByName(id, appName)
@@ -61,8 +61,8 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
   @deprecated("use listDirectories","2.0.0")
   def getDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = GestaltOrg.listDirectories(id)
 
-  def listDirectories(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] =
-    GestaltOrg.listDirectories(id,creds)
+  def listDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] =
+    GestaltOrg.listDirectories(id)
 
   @deprecated("use listApps","2.0.0")
   def getApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.listApps(id)
@@ -129,27 +129,22 @@ case object GestaltOrg {
     client.get[GestaltApp](s"orgs/${orgId}/serviceApp")
   }
 
-  def syncOrgTree(orgId: Option[UUID], creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltOrgSync] = {
+  def syncOrgTree(orgId: Option[UUID])(implicit client: GestaltSecurityClient): Future[GestaltOrgSync] = {
     client.get[GestaltOrgSync](
-      uri = orgId map{id => s"orgs/${id}/sync"} getOrElse "sync",
-      creds = creds
+      uri = orgId map{id => s"orgs/${id}/sync"} getOrElse "sync"
     )
   }
 
-  def createGroup(orgId: UUID, createRequest: GestaltGroupCreateWithRights, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
-    client.post[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest), creds)
+  def createGroup(orgId: UUID, createRequest: GestaltGroupCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
+    client.post[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest))
   }
 
-  def getOrgAccounts(orgId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    client.get[Seq[GestaltAccount]](s"orgs/${orgId}/accounts",creds)
+  def getOrgAccounts(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    client.get[Seq[GestaltAccount]](s"orgs/${orgId}/accounts")
   }
 
   def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest))
-  }
-
-  def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.post[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest), creds)
   }
 
   def mapAccountStore(orgId: UUID, createRequest: GestaltAccountStoreMappingCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccountStoreMapping] = {
@@ -197,19 +192,19 @@ case object GestaltOrg {
   }
 
   def authorizeFrameworkUser(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postEmpty[GestaltAuthResponse](s"auth", Some(creds))
+    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"auth")
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user with api keys"))
   }
 
   def authorizeFrameworkUser(orgFQON: String, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postEmpty[GestaltAuthResponse](s"${orgFQON}/auth", Some(creds))
+    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"${orgFQON}/auth")
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user against org ${orgFQON}"))
   }
 
   def authorizeFrameworkUser(orgId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.postEmpty[GestaltAuthResponse](s"orgs/${orgId}/auth", Some(creds))
+    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"orgs/${orgId}/auth")
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user against org ${orgId}"))
   }
@@ -223,12 +218,12 @@ case object GestaltOrg {
     client.post[GestaltDirectory](s"orgs/${orgId}/directories",Json.toJson(createRequest))
   }
 
-  def createSubOrg(parentOrgId: UUID, create: GestaltOrgCreate, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
-    client.post[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(create),creds)
+  def createSubOrg(parentOrgId: UUID, create: GestaltOrgCreate)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
+    client.post[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(create))
   }
 
-  def deleteOrg(orgId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.deleteDR(s"orgs/${orgId}", creds) map {_.wasDeleted}
+  def deleteOrg(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"orgs/${orgId}") map {_.wasDeleted}
   }
 
   def createApp(orgId: UUID, createRequest: GestaltAppCreate)(implicit client: GestaltSecurityClient): Future[GestaltApp] = {
@@ -239,20 +234,20 @@ case object GestaltOrg {
     client.get[Seq[GestaltOrg]](s"orgs/${orgId}/orgs")
   }
 
-  def listOrgs(creds: Option[GestaltAPICredentials])(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
-    client.get[Seq[GestaltOrg]]("orgs",creds)
+  def listOrgs()(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+    client.get[Seq[GestaltOrg]]("orgs")
   }
 
   def listApps(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = {
     client.get[Seq[GestaltApp]](s"orgs/${orgId}/apps")
   }
 
-  def getCurrentOrg(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
-    client.get[GestaltOrg]("orgs/current", creds)
+  def getCurrentOrg()(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
+    client.get[GestaltOrg]("orgs/current")
   }
 
-  def listDirectories(orgId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = {
-    client.get[Seq[GestaltDirectory]](s"orgs/${orgId}/directories", creds)
+  def listDirectories(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = {
+    client.get[Seq[GestaltDirectory]](s"orgs/${orgId}/directories")
   }
 
   def listAccounts(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
@@ -269,14 +264,6 @@ case object GestaltOrg {
 
   def getByFQON(fqon: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
     client.getOpt[GestaltOrg](s"${fqon}")
-  }
-
-  def getById(orgId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
-    client.getOpt[GestaltOrg](s"orgs/${orgId}", creds)
-  }
-
-  def getByFQON(fqon: String, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {
-    client.getOpt[GestaltOrg](s"${fqon}", creds)
   }
 
   def addGrantToAccount(orgId: UUID, accountId: UUID, grant: GestaltGrantCreate)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {

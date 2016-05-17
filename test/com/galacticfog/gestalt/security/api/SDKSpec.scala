@@ -124,7 +124,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     def mockGet[T](uri: String, maybeCreds: Option[GestaltAPICredentials], ret: T)(implicit client: GestaltSecurityClient, fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]) = {
       client.get[T](
-        Matchers.eq(uri), Matchers.eq(maybeCreds)
+        Matchers.eq(uri)
       )(
         Matchers.any[Reads[T]], Matchers.eq(m)
       ) returns Future.successful(ret)
@@ -132,7 +132,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     def mockPatch[T](uri: String, payload: JsValue, maybeCreds: Option[GestaltAPICredentials], ret: T)(implicit client: GestaltSecurityClient, fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]) = {
       client.patch[T](
-        Matchers.eq(uri), Matchers.eq(payload), Matchers.eq(maybeCreds)
+        Matchers.eq(uri), Matchers.eq(payload)
       )(
         Matchers.any[Reads[T]], Matchers.eq(m)
       ) returns Future.successful(ret)
@@ -264,8 +264,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "handle leading slash and no leading slash" in new TestParameters {
       val route = (GET, baseUrl + "/something", Action{Ok(Json.obj())} )
       val security = getSecurity(route)
-      await(security.getJson("/something",None)).toString() must_== "{}"
-      await(security.getJson("something",None)).toString() must_== "{}"
+      await(security.getJson("/something")).toString() must_== "{}"
+      await(security.getJson("something")).toString() must_== "{}"
     }
 
     "handle failed API authentication with an exception" in new TestParameters {
@@ -282,7 +282,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val url = baseUrl + "/dummy"
       val route = (GET,url, Action { NoContent })
       val security = getSecurity(route)
-      val jsonTry = security.getJson("dummy",Some(testDefaultCreds))
+      val jsonTry = security.getJson("dummy")
       await(jsonTry) must throwAn[APIParseException]
     }
 
@@ -546,16 +546,9 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       org must beSome(testOrg)
     }
 
-    "delete an org by ID with auth override" in new TestParameters {
-      implicit val security = getMockSecurity
-      security.deleteDR(s"orgs/${testOrg.id}", Some(testOverrideCreds)) returns Future.successful(DeleteResult(true))
-      val deleted = await(GestaltOrg.deleteOrg(testOrg.id,Some(testOverrideCreds)))
-      deleted must beTrue
-    }
-
     "delete an org by ID" in new TestParameters {
       implicit val security = getMockSecurity
-      security.deleteDR(s"orgs/${testOrg.id}", None) returns Future.successful(DeleteResult(true))
+      security.deleteDR(s"orgs/${testOrg.id}") returns Future.successful(DeleteResult(true))
       val deleted = await(GestaltOrg.deleteOrg(testOrg.id))
       deleted must beTrue
     }
@@ -643,7 +636,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val parent = UUID.randomUUID()
       val createRequest = GestaltOrgCreate(testOrg.name, true, None)
-      security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), None) returns Future.successful(testOrg)
+      security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future.successful(testOrg)
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest))
       newOrg must_== testOrg
     }
@@ -653,24 +646,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       createRequest.createDefaultUserGroup must beTrue
     }
 
-    "create a new org with auth override" in new TestParameters {
-      implicit val security = getMockSecurity
-      val parent = UUID.randomUUID()
-      val createRequest = GestaltOrgCreate(testOrg.name, true, None)
-      security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest), Some(testOverrideCreds)) returns Future.successful(testOrg)
-      val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest, Some(testOverrideCreds)))
-      newOrg must_== testOrg
-    }
-
     "authenticate framework users against specified org FQON" in new TestParameters {
       implicit val security = getMockSecurity
       val goodCreds = GestaltBasicCredentials("jdoe", "monkey")
       val badCreds = GestaltBasicCredentials("jdoe", "wrongPassword")
+      val securityGood = mock[GestaltSecurityClient]
+      val securityBad  = mock[GestaltSecurityClient]
+      security.withCreds(goodCreds) returns securityGood
+      security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth", Some(goodCreds)) returns
+      securityGood.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
         Future{authResponse}
-      security.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth", Some(badCreds)) returns
+      securityBad.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
         Future.failed(UnauthorizedAPIException("","",""))
 
       await( GestaltOrg.authorizeFrameworkUser(testOrg.fqon, goodCreds) ) must beSome(authResponse)
@@ -679,14 +667,18 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "authenticate framework users against specified org UUID" in new TestParameters {
-      implicit val security = getMockSecurity
       val goodCreds = GestaltBasicCredentials("jdoe", "monkey")
       val badCreds = GestaltBasicCredentials("jdoe", "wrongPassword")
+      implicit val security = getMockSecurity
+      val securityGood = mock[GestaltSecurityClient]
+      val securityBad  = mock[GestaltSecurityClient]
+      security.withCreds(goodCreds) returns securityGood
+      security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", Some(goodCreds)) returns
+      securityGood.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
         Future{authResponse}
-      security.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth", Some(badCreds)) returns
+      securityBad.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
         Future.failed(UnauthorizedAPIException("","",""))
 
       await(GestaltOrg.authorizeFrameworkUser(testOrg.id, goodCreds) ) must beSome(authResponse)
@@ -697,42 +689,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val goodCreds = GestaltBasicCredentials("jdoe", "monkey")
       val badCreds = GestaltBasicCredentials("jdoe", "wrongPassword")
+      val securityGood = mock[GestaltSecurityClient]
+      val securityBad  = mock[GestaltSecurityClient]
+      security.withCreds(goodCreds) returns securityGood
+      security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      security.postEmpty[GestaltAuthResponse](s"auth", Some(goodCreds)) returns
+      securityGood.postEmpty[GestaltAuthResponse](s"auth") returns
         Future{authResponse}
-      security.postEmpty[GestaltAuthResponse](s"auth", Some(badCreds)) returns
+      securityBad.postEmpty[GestaltAuthResponse](s"auth") returns
         Future.failed(UnauthorizedAPIException("","",""))
 
       await(GestaltOrg.authorizeFrameworkUser(goodCreds)) must beSome(authResponse)
       await(GestaltOrg.authorizeFrameworkUser(badCreds)) must beNone
-    }
-
-    "add user with groups to an org with auth override" in new TestParameters {
-      implicit val security = getMockSecurity
-      val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "admins", description = None, directory = testDir, disabled = false, accounts = Seq())
-
-      val create = GestaltAccountCreateWithRights(
-        username = testAccount.username,
-        description = None,
-        firstName = testAccount.firstName,
-        lastName = testAccount.lastName,
-        email = testAccount.email,
-        phoneNumber = testAccount.phoneNumber,
-        groups = Some(Seq(testGroup.id)),
-        rights = Some(Seq(GestaltGrantCreate(testGrant.name))),
-        credential = GestaltPasswordCredential("joe's password")
-      )
-
-      security.post[GestaltAccount](
-        uri = s"orgs/${testOrg.id}/accounts",
-        payload = Json.toJson(create),
-        creds = Some(testOverrideCreds)
-      ) returns Future.successful(testAccount)
-
-      val newAccount = await(GestaltOrg.createAccount(testOrg.id, create, Some(testOverrideCreds)))
-      newAccount must_== testAccount
     }
 
     "add user with groups to an org" in new TestParameters {
@@ -774,34 +743,11 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
       security.post[GestaltGroup](
         uri = s"orgs/${testOrg.id}/groups",
-        payload = Json.toJson(create),
-        creds = None
+        payload = Json.toJson(create)
       ) returns Future.successful(testGroup)
 
       val newGroup = await(GestaltOrg.createGroup(testOrg.id, create))
 
-      newGroup must_== testGroup
-    }
-
-    "add group to an org with auth override" in new TestParameters {
-      implicit val security = getMockSecurity
-      val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
-
-      val create = GestaltGroupCreateWithRights(
-        name = testGroup.name,
-        description = None,
-        rights = Some(Seq(GestaltGrantCreate(testGrant.grantName)))
-      )
-
-      security.post[GestaltGroup](
-        uri = s"orgs/${testOrg.id}/groups",
-        payload = Json.toJson(create),
-        creds = Some(testOverrideCreds)
-      ) returns Future.successful(testGroup)
-
-      val newGroup = await(GestaltOrg.createGroup(testOrg.id, create, Some(testOverrideCreds)))
       newGroup must_== testGroup
     }
 
@@ -827,23 +773,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testGroup.listAccounts()) must containTheSameElementsAs(accountList)
     }
 
-    "list group accounts with override credentials" in new TestParameters {
-      implicit val security = getMockSecurity
-
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val accountList = Seq(
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir),
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir)
-      )
-      mockGet(
-        uri = s"groups/${testGroup.id}/accounts",
-        maybeCreds = Some(testOverrideCreds),
-        ret = accountList
-      )
-
-      await(testGroup.listAccounts(Some(testOverrideCreds))) must containTheSameElementsAs(accountList)
-    }
-
     "update group membership" in new TestParameters {
       implicit val security = getMockSecurity
 
@@ -864,37 +793,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testGroup.updateMembership(add = Seq(addId), remove = Seq(remId))) must containTheSameElementsAs(updatedAccountList)
     }
 
-    "update group membership with override credentials" in new TestParameters {
-      implicit val security = getMockSecurity
-
-      val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val addId = UUID.randomUUID()
-      val remId = UUID.randomUUID()
-
-      val updatedAccountList = Seq(GestaltAccount(addId, "", "", "", None, "", "", testDir).getLink())
-      mockPatch(
-        uri = s"groups/${testGroup.id}/accounts",
-        payload = Json.toJson(Seq(
-          PatchOp("add", "", Json.toJson(addId)),
-          PatchOp("remove", "", Json.toJson(remId))
-        )),
-        maybeCreds = Some(testOverrideCreds),
-        ret = updatedAccountList
-      )
-
-      await(testGroup.updateMembership(
-        add = Seq(addId),
-        remove = Seq(remId),
-        creds = Some(testOverrideCreds))
-      ) must containTheSameElementsAs(updatedAccountList)
-    }
-
     "delete groups" in new TestParameters {
       implicit val security = getMockSecurity
 
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
-      security.deleteDR(s"groups/${testGroup.id}", Some(testOverrideCreds)) returns Future.successful(DeleteResult(true))
-      await(GestaltGroup.deleteGroup(testGroup.id, Some(testOverrideCreds))) must beTrue
+      security.deleteDR(s"groups/${testGroup.id}") returns Future.successful(DeleteResult(true))
+      await(GestaltGroup.deleteGroup(testGroup.id)) must beTrue
     }
 
   }
@@ -903,8 +807,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "delete an account by ID" in new TestParameters {
       implicit val security = getMockSecurity
-      security.deleteDR(s"accounts/${testAccount.id}", Some(testOverrideCreds)) returns Future.successful(DeleteResult(true))
-      await(GestaltAccount.deleteAccount(testAccount.id, Some(testOverrideCreds))) must beTrue
+      security.deleteDR(s"accounts/${testAccount.id}") returns Future.successful(DeleteResult(true))
+      await(GestaltAccount.deleteAccount(testAccount.id)) must beTrue
     }
 
     "list account groups" in new TestParameters {
@@ -924,23 +828,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testAccount.listGroupMemberships()) must containTheSameElementsAs(groupList)
     }
 
-    "list account groups with override credentials" in new TestParameters {
-      implicit val security = getMockSecurity
-
-      val groupList = Seq(
-        GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq()),
-        GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
-      )
-      mockGet(
-        uri = s"accounts/${testAccount.id}/groups",
-        maybeCreds = Some(testOverrideCreds),
-        ret = groupList
-      )
-
-      val res: Seq[GestaltGroup] = await(testAccount.listGroupMemberships(Some(testOverrideCreds)))
-      res must containTheSameElementsAs(groupList)
-    }
-
   }
 
   "GestaltApp" should {
@@ -951,8 +838,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "delete an app by ID" in new TestParameters {
       implicit val security = getMockSecurity
-      security.deleteDR(s"apps/${testApp.id}", Some(testOverrideCreds)) returns Future.successful(DeleteResult(true))
-      await(GestaltApp.deleteApp(testApp.id, Some(testOverrideCreds))) must beTrue
+      security.deleteDR(s"apps/${testApp.id}") returns Future.successful(DeleteResult(true))
+      await(GestaltApp.deleteApp(testApp.id)) must beTrue
     }
 
     "list all accounts" in new TestParameters {
@@ -1314,7 +1201,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         maybeCreds = Some(testOverrideCreds),
         ret = testResp
       )
-      val apps = await(testDir.listAccounts(Some(testOverrideCreds)))
+      val apps = await(testDir.listAccounts())
       apps must_== Seq(acc1, acc2)
     }
 

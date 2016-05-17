@@ -17,6 +17,14 @@ case class DeleteResult(wasDeleted: Boolean)
 
 class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val hostname: String, val port: Int, val creds: GestaltAPICredentials) {
 
+  def withCreds(creds: GestaltAPICredentials) = new GestaltSecurityClient(
+    client = this.client,
+    protocol = this.protocol,
+    hostname = this.hostname,
+    port = this.port,
+    creds = creds
+  )
+
   def validate[T](json: JsValue)(implicit m: reflect.Manifest[T], rds: Reads[T]): T = {
     json.validate[T] match {
       case s: JsSuccess[T] => s.get
@@ -29,16 +37,16 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     }
   }
 
-  def patch[T](uri: String, payload: JsValue, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    patchJson(uri, payload, creds) map validate[T]
+  def patch[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    patchJson(uri, payload) map validate[T]
   }
 
-  def post[T](uri: String, payload: JsValue, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    postJson(uri, payload, creds) map validate[T]
+  def post[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postJson(uri, payload) map validate[T]
   }
 
-  def postEmpty[T](uri: String, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    postJson(uri, creds) map validate[T]
+  def postEmpty[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    postJson(uri) map validate[T]
   }
 
   def postForm[T](endpoint: String, fields: Map[String, String])(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
@@ -47,24 +55,24 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
       .post(fields.mapValues(Seq(_))) flatMap processResponse map validate[T]
   }
 
-  def put[T](uri: String, payload: JsValue, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    putJson(uri,payload,creds) map validate[T]
+  def put[T](uri: String, payload: JsValue)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    putJson(uri,payload) map validate[T]
   }
 
-  def get[T](uri: String, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    getJson(uri,creds) map validate[T]
+  def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    getJson(uri) map validate[T]
   }
 
-  def deleteDR(uri: String, creds: Option[GestaltAPICredentials] = None): Future[DeleteResult] = {
-    deleteJson(uri, creds) map validate[DeleteResult]
+  def deleteDR(uri: String): Future[DeleteResult] = {
+    deleteJson(uri) map validate[DeleteResult]
   }
 
-  def delete[T](uri: String, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
-    deleteJson(uri, creds) map validate[T]
+  def delete[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    deleteJson(uri) map validate[T]
   }
 
-  def getOpt[T](uri: String, creds: Option[GestaltAPICredentials] = None)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[Option[T]] = {
-    getJson(uri, creds) map {
+  def getOpt[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[Option[T]] = {
+    getJson(uri) map {
       j => Some(validate[T](j))
     } recover {
       case notFound: ResourceNotFoundException => None
@@ -106,13 +114,13 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     else endpoint
   }
 
-  private def addAuth(rh: WSRequestHolder, creds: GestaltAPICredentials) = creds match {
+  private def addAuth(rh: WSRequestHolder) = this.creds match {
     case basic: GestaltBasicCredentials  => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
     case basic: GestaltBearerCredentials => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
   }
 
-  private def genRequest(sendingJson: Boolean, endpoint: String, creds: Option[GestaltAPICredentials]): WSRequestHolder = {
-    val rh = addAuth( client.url(genUri(endpoint)), creds getOrElse this.creds )
+  private def genRequest(sendingJson: Boolean, endpoint: String): WSRequestHolder = {
+    val rh = addAuth( client.url(genUri(endpoint)) )
     if (sendingJson) rh.withHeaders(
         "Content-Type" -> MimeTypes.JSON,
         "Accept" -> MimeTypes.JSON
@@ -124,23 +132,23 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     s"${protocol}://${hostname}:${port}/${removeLeadingSlash(endpoint)}"
   }
 
-  def getJson(endpoint: String, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint, creds).get() flatMap processResponse
+  def getJson(endpoint: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint).get() flatMap processResponse
 
-  def postJson(endpoint: String, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint, creds).post("") flatMap processResponse
+  def postJson(endpoint: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint).post("") flatMap processResponse
 
-  def postJson(endpoint: String, payload: JsValue, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = true, endpoint, creds).post(payload) flatMap processResponse
+  def postJson(endpoint: String, payload: JsValue): Future[JsValue] =
+    genRequest(sendingJson = true, endpoint).post(payload) flatMap processResponse
 
-  def patchJson(endpoint: String, payload: JsValue, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = true, endpoint, creds).patch(payload) flatMap processResponse
+  def patchJson(endpoint: String, payload: JsValue): Future[JsValue] =
+    genRequest(sendingJson = true, endpoint).patch(payload) flatMap processResponse
 
-  def putJson(endpoint: String, payload: JsValue, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = true, endpoint, creds).put(payload) flatMap processResponse
+  def putJson(endpoint: String, payload: JsValue): Future[JsValue] =
+    genRequest(sendingJson = true, endpoint).put(payload) flatMap processResponse
 
-  def deleteJson(endpoint: String, creds: Option[GestaltAPICredentials]): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint, creds).delete() flatMap processResponse
+  def deleteJson(endpoint: String): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint).delete() flatMap processResponse
 }
 
 object GestaltSecurityClient {

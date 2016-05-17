@@ -47,6 +47,13 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       security.client == WS.client
     }
 
+    "allow credentials override" in new WithApplication {
+      val newCreds = GestaltBasicCredentials("otherKey", "otherSecret")
+      val security = GestaltSecurityClient(HTTP,"localhost",9000,"someKey","someSecret").withCreds(newCreds)
+      security.creds must beAnInstanceOf[GestaltBasicCredentials]
+      security.creds.asInstanceOf[GestaltBasicCredentials] must_== newCreds
+    }
+
     class FullyMockedWSClient extends Scope {
       val wsclient = mock[WSClient]
       val testHolder = mock[WSRequestHolder]
@@ -80,42 +87,52 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     }
 
     "properly use apiKey and apiSecret for authentication on GET" in new FullyMockedWSClient {
-      await(security.getJson("/",Some(basicCreds)))
+      await(security.getJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
     "properly use apiKey and apiSecret for authentication on DELETE" in new FullyMockedWSClient {
-      await(security.deleteJson("/",Some(basicCreds)))
+      await(security.deleteJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
     "properly use apiKey and apiSecret for authentication on POST(empty)" in new FullyMockedWSClient {
-      await(security.postJson("/",Some(basicCreds)))
+      await(security.postJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
     "properly use apiKey and apiSecret for authentication on POST(body)" in new FullyMockedWSClient {
-      await(security.postJson("/",Json.obj(),Some(basicCreds)))
+      await(security.postJson("/", Json.obj()))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
+    }
+
+    "properly use apiKey and apiSecret for authentication on PATCH" in new FullyMockedWSClient {
+      await(security.patchJson("/", Json.obj()))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
     "properly use token for authentication on GET" in new FullyMockedWSClient {
-      await(security.getJson("/",Some(tokenCreds)))
+      await(security.withCreds(tokenCreds).getJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
     "properly use token for authentication on DELETE" in new FullyMockedWSClient {
-      await(security.deleteJson("/",Some(tokenCreds)))
+      await(security.withCreds(tokenCreds).deleteJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
     "properly use token for authentication on POST(empty)" in new FullyMockedWSClient {
-      await(security.postJson("/",Some(tokenCreds)))
+      await(security.withCreds(tokenCreds).postJson("/"))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
     "properly use token for authentication on POST(body)" in new FullyMockedWSClient {
-      await(security.postJson("/",Json.obj(),Some(tokenCreds)))
+      await(security.withCreds(tokenCreds).postJson("/",Json.obj()))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "properly use token for authentication on PATCH" in new FullyMockedWSClient {
+      await(security.withCreds(tokenCreds).patchJson("/",Json.obj()))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 

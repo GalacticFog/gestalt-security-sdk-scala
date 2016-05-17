@@ -46,12 +46,12 @@ case class GestaltDirectory(id: UUID, name: String, description: Option[String],
     listAccounts()
   }
 
-  def listAccounts(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    GestaltDirectory.listAccounts(id, creds)
+  def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    GestaltDirectory.listAccounts(id)
   }
 
-  def listGroups(creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    GestaltDirectory.listGroups(id, creds)
+  def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltDirectory.listGroups(id)
   }
 
 }
@@ -92,13 +92,8 @@ object GestaltDirectory {
     client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts")
   }
 
-  def listAccounts(directoryId: UUID, creds: Option[GestaltAPICredentials] = None)
-                  (implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    client.get[Seq[GestaltAccount]](s"directories/${directoryId}/accounts", creds)
-  }
-
-  def listGroups(directoryId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups", creds)
+  def listGroups(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"directories/${directoryId}/groups")
   }
 
   def createAccount(directoryId: UUID, create: GestaltAccountCreate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {

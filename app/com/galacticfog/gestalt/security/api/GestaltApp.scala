@@ -129,8 +129,8 @@ case object GestaltApp {
     client.getOpt[GestaltAccount](s"apps/${appId}/usernames/${username}")
   }
 
-  def deleteApp(appId: UUID, creds: Option[GestaltAPICredentials] = None)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.deleteDR(s"apps/${appId}", creds) map { _.wasDeleted }
+  def deleteApp(appId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"apps/${appId}") map { _.wasDeleted }
   }
 
   def authorizeUser(appId: UUID, creds: GestaltAuthToken)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
