@@ -91,8 +91,6 @@ case class GestaltOrgSync(orgs: Seq[GestaltOrg], accounts: Seq[GestaltAccount], 
 
 case class GestaltOrgCreate(name: String, createDefaultUserGroup: Boolean, description: Option[String] = None)
 
-case class GestaltOrgUpdate(name: String)
-
 case object GestaltOrg {
 
   def listGroupGrants(orgId: UUID, groupId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltRightGrant]] = {
