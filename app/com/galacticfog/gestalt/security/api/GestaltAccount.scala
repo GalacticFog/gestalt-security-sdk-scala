@@ -72,13 +72,13 @@ case object GestaltAccount {
 }
 
 case class GestaltAccountCreate(username: String,
-                                description: Option[String],
                                 firstName: String,
                                 lastName: String,
                                 email: String,
                                 phoneNumber: String,
+                                credential: GestaltAccountCredential,
                                 groups: Option[Seq[UUID]] = None,
-                                credential: GestaltAccountCredential)
+                                description: Option[String] = None)
 
 case class GestaltAccountUpdate(username: Option[String],
                                 description: Option[String],
@@ -89,14 +89,14 @@ case class GestaltAccountUpdate(username: Option[String],
                                 lastName: Option[String])
 
 case class GestaltAccountCreateWithRights(username: String,
-                                          description: Option[String],
                                           firstName: String,
                                           lastName: String,
                                           email: String,
                                           phoneNumber: String,
                                           credential: GestaltAccountCredential,
                                           groups: Option[Seq[UUID]] = None,
-                                          rights: Option[Seq[GestaltGrantCreate]] = None)
+                                          rights: Option[Seq[GestaltGrantCreate]] = None,
+                                          description: Option[String] = None)
 
 case class GestaltGroup(id: UUID, name: String, description: Option[String], directory: GestaltDirectory, disabled: Boolean, accounts: Seq[ResourceLink]) extends GestaltResource {
 
@@ -111,12 +111,11 @@ case class GestaltGroup(id: UUID, name: String, description: Option[String], dir
 }
 
 case class GestaltGroupCreate(name: String,
-                              description: Option[String])
-
+                              description: Option[String] = None)
 
 case class GestaltGroupCreateWithRights(name: String,
-                                        description: Option[String],
-                                        rights: Option[Seq[GestaltGrantCreate]] = None)
+                                        rights: Option[Seq[GestaltGrantCreate]] = None,
+                                        description: Option[String] = None)
 
 case object GestaltGroup {
 

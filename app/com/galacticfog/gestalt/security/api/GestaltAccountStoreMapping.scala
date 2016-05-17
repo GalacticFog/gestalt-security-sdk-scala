@@ -20,15 +20,15 @@ case object GROUP extends GestaltAccountStoreType {
 }
 
 case class GestaltAccountStoreMappingCreate(name: String,
-                                            description: Option[String],
                                             storeType: GestaltAccountStoreType,
                                             accountStoreId: UUID,
                                             isDefaultAccountStore: Boolean,
-                                            isDefaultGroupStore: Boolean) {
+                                            isDefaultGroupStore: Boolean,
+                                            description: Option[String] = None) {
   def this(name: String, description: Option[String], dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
+    this(name, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore, description = description)
   def this(name: String, description: Option[String], group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
+    this(name, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore, description = description)
 }
 
 case class GestaltAccountStoreMapping(id: UUID,
