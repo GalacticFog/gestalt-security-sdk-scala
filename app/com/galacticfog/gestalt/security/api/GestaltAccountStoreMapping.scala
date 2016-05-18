@@ -20,20 +20,20 @@ case object GROUP extends GestaltAccountStoreType {
 }
 
 case class GestaltAccountStoreMappingCreate(name: String,
-                                            description: String,
                                             storeType: GestaltAccountStoreType,
                                             accountStoreId: UUID,
                                             isDefaultAccountStore: Boolean,
-                                            isDefaultGroupStore: Boolean) {
-  def this(name: String, description: String, dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
-  def this(name: String, description: String, group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
-    this(name, description, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore)
+                                            isDefaultGroupStore: Boolean,
+                                            description: Option[String] = None) {
+  def this(name: String, description: Option[String], dir: GestaltDirectory, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
+    this(name, storeType = DIRECTORY, accountStoreId = dir.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore, description = description)
+  def this(name: String, description: Option[String], group: GestaltGroup, app: GestaltApp, isDefaultAccountStore: Boolean, isDefaultGroupStore: Boolean) =
+    this(name, storeType = GROUP, accountStoreId = group.id, isDefaultAccountStore = isDefaultAccountStore, isDefaultGroupStore = isDefaultGroupStore, description = description)
 }
 
 case class GestaltAccountStoreMapping(id: UUID,
                                       name: String,
-                                      description: String,
+                                      description: Option[String],
                                       storeType: GestaltAccountStoreType,
                                       storeId: UUID,
                                       appId: UUID,
@@ -51,7 +51,7 @@ case class GestaltAccountStoreMapping(id: UUID,
 object GestaltAccountStoreMapping {
 
   def delete(mappingId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"accountStores/${mappingId}") map {_.wasDeleted}
+    client.deleteDR(s"accountStores/${mappingId}") map {_.wasDeleted}
   }
 
   def getById(mappingId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccountStoreMapping]] = {

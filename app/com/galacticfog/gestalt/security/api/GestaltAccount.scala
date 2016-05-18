@@ -12,6 +12,7 @@ case class GestaltAccount(id: UUID,
                           username: String,
                           firstName: String,
                           lastName: String,
+                          description: Option[String],
                           email: String,
                           phoneNumber: String,
                           directory: GestaltDirectory)
@@ -41,27 +42,27 @@ case object GestaltAccount {
   }
 
   def deregisterPhoneNumber(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.deleteJson[GestaltAccount](s"accounts/${accountId}/phoneNumber")
+    client.delete[GestaltAccount](s"accounts/${accountId}/phoneNumber")
   }
 
   def deregisterEmail(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.deleteJson[GestaltAccount](s"accounts/${accountId}/email")
+    client.delete[GestaltAccount](s"accounts/${accountId}/email")
   }
 
-  def getAccountGroups(accountId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.getWithAuth[Seq[GestaltGroup]](s"accounts/${accountId}/groups",creds)
+  def getAccountGroups(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"accounts/${accountId}/groups")
   }
 
-  def getAccounts(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    client.getWithAuth[Seq[GestaltAccount]](s"accounts",creds)
+  def getAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    client.get[Seq[GestaltAccount]](s"accounts")
   }
 
-  def deleteAccount(accountId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"accounts/${accountId}", creds) map {_.wasDeleted}
+  def deleteAccount(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"accounts/${accountId}") map {_.wasDeleted}
   }
 
-  def updateAccount(accountId: UUID, update: GestaltAccountUpdate, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
-    client.patchWithAuth[GestaltAccount](s"accounts/${accountId}", Json.toJson(update), creds)
+  def updateAccount(accountId: UUID, update: GestaltAccountUpdate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.patch[GestaltAccount](s"accounts/${accountId}", Json.toJson(update))
   }
 
   def getById(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
@@ -75,10 +76,12 @@ case class GestaltAccountCreate(username: String,
                                 lastName: String,
                                 email: String,
                                 phoneNumber: String,
+                                credential: GestaltAccountCredential,
                                 groups: Option[Seq[UUID]] = None,
-                                credential: GestaltAccountCredential)
+                                description: Option[String] = None)
 
 case class GestaltAccountUpdate(username: Option[String],
+                                description: Option[String],
                                 email: Option[String],
                                 phoneNumber: Option[String],
                                 credential: Option[GestaltAccountCredential],
@@ -92,24 +95,27 @@ case class GestaltAccountCreateWithRights(username: String,
                                           phoneNumber: String,
                                           credential: GestaltAccountCredential,
                                           groups: Option[Seq[UUID]] = None,
-                                          rights: Option[Seq[GestaltGrantCreate]] = None)
+                                          rights: Option[Seq[GestaltGrantCreate]] = None,
+                                          description: Option[String] = None)
 
-case class GestaltGroup(id: UUID, name: String, directory: GestaltDirectory, disabled: Boolean) extends GestaltResource {
+case class GestaltGroup(id: UUID, name: String, description: Option[String], directory: GestaltDirectory, disabled: Boolean, accounts: Seq[ResourceLink]) extends GestaltResource {
+
   override val href: String = s"/groups/${id}"
 
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] =
     GestaltGroup.listAccounts(id)
 
-  def updateMembership(add: Seq[UUID] = Seq(), remove: Seq[UUID] = Seq())(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+  def updateMembership(add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[ResourceLink]] = {
     GestaltGroup.updateMembership(id, add, remove)
   }
 }
 
-case class GestaltGroupCreate(name: String)
-
+case class GestaltGroupCreate(name: String,
+                              description: Option[String] = None)
 
 case class GestaltGroupCreateWithRights(name: String,
-                                        rights: Option[Seq[GestaltGrantCreate]] = None)
+                                        rights: Option[Seq[GestaltGrantCreate]] = None,
+                                        description: Option[String] = None)
 
 case object GestaltGroup {
 
@@ -117,21 +123,21 @@ case object GestaltGroup {
     client.get[Seq[GestaltAccount]](s"groups/${groupId}/accounts")
   }
 
-  def getGroups(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.getWithAuth[Seq[GestaltGroup]]("groups",creds)
+  def getGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]]("groups")
   }
 
   def getById(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
     client.getOpt[GestaltGroup](s"groups/${groupId}")
   }
 
-  def deleteGroup(groupId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Boolean] = {
-    client.delete(s"groups/${groupId}", creds) map {_.wasDeleted}
+  def deleteGroup(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"groups/${groupId}") map {_.wasDeleted}
   }
 
-  def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+  def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[ResourceLink]] = {
     import com.galacticfog.gestalt.io.util.PatchUpdate._
-    client.patch[Seq[GestaltAccount]](
+    client.patch[Seq[ResourceLink]](
       uri = s"groups/${groupId}/accounts",
       payload = Json.toJson(
         add.map {accountId => PatchOp("add","",Json.toJson(accountId))} ++

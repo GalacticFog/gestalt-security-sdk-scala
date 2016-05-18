@@ -11,9 +11,9 @@ import org.specs2.runner._
 @RunWith(classOf[JUnitRunner])
 class AuthorizationCheckSpecs extends Specification with Mockito with Tables {
 
-  def testApp = GestaltApp(id = UUID.randomUUID, name = "testApp", orgId = UUID.randomUUID, isServiceApp = false)
-  def testDir = GestaltDirectory(id = UUID.randomUUID, name = "testDir", description = "test directory", orgId = testApp.orgId)
-  def testAccount = GestaltAccount(id = UUID.randomUUID, "john", "John", "Doe", "jdoe@gmail.com", "850-867-5309", directory = testDir)
+  def testApp = GestaltApp(id = UUID.randomUUID, name = "testApp", description = None, orgId = UUID.randomUUID, isServiceApp = false)
+  def testDir = GestaltDirectory(id = UUID.randomUUID, name = "testDir", description = Some("test directory"), orgId = testApp.orgId)
+  def testAccount = GestaltAccount(id = UUID.randomUUID, "john", "John", "Doe", description = None, email = "jdoe@gmail.com", phoneNumber = "850-867-5309", directory = testDir)
 
   def genRight(rightName: String, rightValue: Option[String]) = GestaltRightGrant(UUID.randomUUID,rightName,rightValue,appId=testApp.id)
   def genRight(rightName: String): GestaltRightGrant = genRight(rightName,None)

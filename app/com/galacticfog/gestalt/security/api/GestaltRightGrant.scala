@@ -11,6 +11,7 @@ case class GestaltRightGrant(id: UUID,
 {
   override val href: String = s"/rights/${id}"
   override def name: String = grantName
+  override def description: Option[String] = None
 }
 
 case class GestaltGrantCreate(grantName: String, grantValue: Option[String] = None)
