@@ -37,8 +37,13 @@ case class GestaltAccount(id: UUID,
 
 case object GestaltAccount {
 
-  def listGroupMemberships(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+  def listGroupMemberships(accountId: UUID)
+                          (implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.get[Seq[GestaltGroup]](s"accounts/${accountId}/groups")
+  }
+
+  def getSelf()(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+    client.get[GestaltAccount]("accounts/self")
   }
 
   def deregisterPhoneNumber(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
