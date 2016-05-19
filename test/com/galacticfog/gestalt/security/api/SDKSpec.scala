@@ -805,6 +805,12 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
   "GestaltAccount" should {
 
+    "know thyself" in new TestParameters {
+      val route = (GET, baseUrl + "/accounts/self", Action{Ok(Json.toJson(testAccount))} )
+      implicit val security = getSecurity(route)
+      await(GestaltAccount.getSelf()) must_== testAccount
+    }
+
     "delete an account by ID" in new TestParameters {
       implicit val security = getMockSecurity
       security.deleteDR(s"accounts/${testAccount.id}") returns Future.successful(DeleteResult(true))
