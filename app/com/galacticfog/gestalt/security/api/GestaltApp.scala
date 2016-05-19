@@ -212,5 +212,7 @@ case object GestaltApp {
   def updateGrant(appId: UUID, username: String, grant: GestaltRightGrant)(implicit client: GestaltSecurityClient): Future[GestaltRightGrant] = {
     addGrant(appId, username, grant)
   }
+
+
 }
 

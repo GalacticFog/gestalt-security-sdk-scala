@@ -420,6 +420,62 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       org must_== returnedOrg
     }
 
+    "generate api credentials with no org" in new TestParameters {
+      val url = baseUrl + s"/accounts/${testAccount.id}/apiKeys"
+      val returnedAPIKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        orgId = None,
+        disabled = false
+      )
+      val route = (POST, url, Action(BodyParsers.parse.json) { request =>
+        (request.body \ "orgId").asOpt[UUID] match {
+          case None => Ok(Json.toJson(returnedAPIKey))
+          case _ => BadRequest(Json.obj())
+        }
+      })
+      implicit val security = getSecurityJson(route)
+      val key = await(testAccount.generateAPICredentials())
+      key must_== returnedAPIKey
+    }
+
+    "generate api credentials with org" in new TestParameters {
+      val url = baseUrl + s"/accounts/${testAccount.id}/apiKeys"
+      val returnedAPIKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        orgId = Some(testOrg.id),
+        disabled = false
+      )
+      val route = (POST, url, Action(BodyParsers.parse.json) { request =>
+        (request.body \ "orgId").asOpt[UUID] match {
+          case Some(testOrg.id) => Ok(Json.toJson(returnedAPIKey))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurityJson(route)
+      val key = await(testAccount.generateAPICredentials(Some(testOrg.id)))
+      key must_== returnedAPIKey
+    }
+
+    "delete api key" in new TestParameters {
+      val testKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        orgId = None,
+        disabled = false
+      )
+      val url = baseUrl + s"/apiKeys/${testKey.id}"
+      val route = (DELETE, url, Action {request =>
+        Ok(Json.toJson(DeleteResult(true)))
+      })
+      implicit val security = getSecurity(route)
+      await(testKey.delete()) must beTrue
+    }
+
     "generate tokens against orgId from password grants using oauth2 standard" in new TestParameters {
       val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
       val now = DateTime.now()

@@ -52,6 +52,7 @@ object JsonImports {
   implicit val dirFormat = Json.format[GestaltDirectory]
   implicit val groupFormat = Json.format[GestaltGroup]
   implicit val acctFormat = Json.format[GestaltAccount]
+  implicit val apiKeyFormat = Json.format[GestaltAPIKey]
   implicit val grantFormat = Json.format[GestaltRightGrant]
   implicit val authFormat = Json.format[GestaltAuthResponse]
   implicit val storeMappingFormat = Json.format[GestaltAccountStoreMapping]
