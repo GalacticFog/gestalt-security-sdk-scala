@@ -636,7 +636,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val parent = UUID.randomUUID()
       val createRequest = GestaltOrgCreate(testOrg.name, true, None)
-      security.post[GestaltOrg](s"orgs/${parent}", Json.toJson(createRequest)) returns Future.successful(testOrg)
+      security.post[GestaltOrg](s"orgs/${parent}/orgs", Json.toJson(createRequest)) returns Future.successful(testOrg)
       val newOrg = await(GestaltOrg.createSubOrg(parentOrgId = parent, createRequest))
       newOrg must_== testOrg
     }

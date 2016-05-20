@@ -219,7 +219,7 @@ case object GestaltOrg {
   }
 
   def createSubOrg(parentOrgId: UUID, create: GestaltOrgCreate)(implicit client: GestaltSecurityClient): Future[GestaltOrg] = {
-    client.post[GestaltOrg](s"orgs/${parentOrgId}",Json.toJson(create))
+    client.post[GestaltOrg](s"orgs/${parentOrgId}/orgs",Json.toJson(create))
   }
 
   def deleteOrg(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
