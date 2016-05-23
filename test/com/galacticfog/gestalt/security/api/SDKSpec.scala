@@ -426,7 +426,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         apiKey = UUID.randomUUID().toString,
         apiSecret = Some("reallylongpassword"),
         accountId = testAccount.id,
-        orgId = None,
         disabled = false
       )
       val route = (POST, url, Action(BodyParsers.parse.json) { request =>
@@ -446,7 +445,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         apiKey = UUID.randomUUID().toString,
         apiSecret = Some("reallylongpassword"),
         accountId = testAccount.id,
-        orgId = Some(testOrg.id),
         disabled = false
       )
       val route = (POST, url, Action(BodyParsers.parse.json) { request =>
@@ -465,7 +463,6 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         apiKey = UUID.randomUUID().toString,
         apiSecret = Some("reallylongpassword"),
         accountId = testAccount.id,
-        orgId = None,
         disabled = false
       )
       val url = baseUrl + s"/apiKeys/${testKey.id}"

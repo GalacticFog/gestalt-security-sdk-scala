@@ -42,7 +42,6 @@ case class GestaltAccount(id: UUID,
 case class GestaltAPIKey(apiKey: String,
                          apiSecret: Option[String],
                          accountId: UUID,
-                         orgId: Option[UUID],
                          disabled: Boolean) extends GestaltResource {
 
   def delete()(implicit client: GestaltSecurityClient): Future[Boolean] =
