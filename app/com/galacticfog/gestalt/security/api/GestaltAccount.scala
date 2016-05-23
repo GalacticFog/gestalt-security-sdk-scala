@@ -13,8 +13,8 @@ case class GestaltAccount(id: UUID,
                           firstName: String,
                           lastName: String,
                           description: Option[String],
-                          email: String,
-                          phoneNumber: String,
+                          email: Option[String],
+                          phoneNumber: Option[String],
                           directory: GestaltDirectory)
   extends GestaltResource
   with PatchSupport[GestaltAccount]
@@ -122,25 +122,25 @@ case object GestaltAccount {
 case class GestaltAccountCreate(username: String,
                                 firstName: String,
                                 lastName: String,
-                                email: String,
-                                phoneNumber: String,
+                                email: Option[String] = None,
+                                phoneNumber: Option[String] = None,
                                 credential: GestaltAccountCredential,
                                 groups: Option[Seq[UUID]] = None,
                                 description: Option[String] = None)
 
-case class GestaltAccountUpdate(username: Option[String],
-                                description: Option[String],
-                                email: Option[String],
-                                phoneNumber: Option[String],
-                                credential: Option[GestaltAccountCredential],
-                                firstName: Option[String],
-                                lastName: Option[String])
+case class GestaltAccountUpdate(username: Option[String] = None,
+                                description: Option[String] = None,
+                                email: Option[String] = None,
+                                phoneNumber: Option[String] = None,
+                                credential: Option[GestaltAccountCredential] = None,
+                                firstName: Option[String] = None,
+                                lastName: Option[String] = None)
 
 case class GestaltAccountCreateWithRights(username: String,
                                           firstName: String,
                                           lastName: String,
-                                          email: String,
-                                          phoneNumber: String,
+                                          email: Option[String] = None,
+                                          phoneNumber: Option[String] = None,
                                           credential: GestaltAccountCredential,
                                           groups: Option[Seq[UUID]] = None,
                                           rights: Option[Seq[GestaltGrantCreate]] = None,

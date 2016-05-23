@@ -67,8 +67,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       firstName = "John",
       lastName = "Perry",
       None,
-      email = "jperry202@cdf.cu",
-      phoneNumber = "850-867-5309",
+      email = Some("jperry202@cdf.cu"),
+      phoneNumber = Some("850-867-5309"),
       directory = testDir
     )
     val testMapping = GestaltAccountStoreMapping(UUID.randomUUID,"Staff Members",Some("Staff members authorized for this app."),DIRECTORY,testDir.id,testApp.id,false,false)
@@ -371,8 +371,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "support sync against org root" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, None, Seq())
       val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, None, Seq(chld.getLink))
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, "jdee@org", "", testDir)
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, "jdoe@chld.org", "", testDir)
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, Some("jdee@org"), None, testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, Some("jdoe@chld.org"), None, testDir)
       val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", None, testDir, false, accounts = Seq(john.getLink(), jane.getLink()))
       val rootUrl = baseUrl + "/sync"
       val route = (GET, rootUrl, Action {
@@ -392,8 +392,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "support sync against suborg" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, None, Seq())
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, "jdee@org", "", testDir)
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, "jdoe@chld.org", "", testDir)
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, Some("jdee@org"), None, testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, Some("jdoe@chld.org"), None, testDir)
       val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", None, testDir, false, accounts = Seq(john.getLink(), jane.getLink()))
       val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
       val route = (GET, chldUrl, Action {
@@ -814,8 +814,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
 
       val accountList = Seq(
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir),
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir)
+        GestaltAccount(UUID.randomUUID(), "", "", "", None, None, None, testDir),
+        GestaltAccount(UUID.randomUUID(), "", "", "", None, None, None, testDir)
       )
       mockGet(
         uri = s"groups/${testGroup.id}/accounts",
@@ -833,7 +833,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val addId = UUID.randomUUID()
       val remId = UUID.randomUUID()
 
-      val updatedAccountList = Seq(GestaltAccount(addId, "", "", "", None, "", "", testDir).getLink())
+      val updatedAccountList = Seq(GestaltAccount(addId, "", "", "", None, None, None, testDir).getLink())
       mockPatch(
         uri = s"groups/${testGroup.id}/accounts",
         payload = Json.toJson(Seq(
@@ -902,8 +902,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list all accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", None, None, None, testDir)
       val url = baseUrl + s"/apps/${testApp.id}/accounts"
       val route = (GET, url, Action { request =>
         Ok(Json.toJson(Seq(acc1,acc2)))
@@ -1238,8 +1238,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list directory accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, None, None, testDir)
       val testResp = Json.toJson(Seq(acc1, acc2))
       val url = baseUrl + s"/directories/${testDir.id}/accounts"
       val route = (GET, url, Action {
@@ -1252,8 +1252,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "list directory accounts with override credentials" in new TestParameters {
       implicit val security = getMockSecurity
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, None, None, testDir)
       val testResp = Seq(acc1, acc2)
       mockGet(
         uri = s"directories/${testDir.id}/accounts",
@@ -1266,12 +1266,9 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "create user failure returns failed try" in new TestParameters {
       val createRequest = GestaltAccountCreate(
-        username = "",
-        description = None,
+        username = "mock-fail",
         firstName = "",
         lastName = "",
-        email = "",
-        phoneNumber = "",
         credential = GestaltPasswordCredential("")
       )
       val url = baseUrl + s"/directories/${testDir.id}/accounts"
