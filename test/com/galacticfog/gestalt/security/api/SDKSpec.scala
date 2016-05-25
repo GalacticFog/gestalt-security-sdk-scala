@@ -473,6 +473,51 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(testKey.delete()) must beTrue
     }
 
+    "generate tokens against orgId from client credentials grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val now = DateTime.now()
+      val newToken = OpaqueToken(UUID.randomUUID(),ACCESS_TOKEN)
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("grant_type") == Some(Seq("client_credentials")) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.id))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "generate tokens against FQON from client credentials grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val now = DateTime.now()
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("grant_type") == Some(Seq("client_credentials")) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.fqon))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "handle tokens request failure from client credentials grant (orgId)" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.id))
+      resp must beNone
+    }
+
+    "handle tokens request failure from client credentials grant (fqon)" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.fqon))
+      resp must beNone
+    }
+
     "generate tokens against orgId from password grants using oauth2 standard" in new TestParameters {
       val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
       val now = DateTime.now()
@@ -486,7 +531,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.id, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.id, "user", "pass"))
       resp must beSome(testTokenAuthResponse)
     }
 
@@ -502,15 +547,23 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.fqon, "user", "pass"))
       resp must beSome(testTokenAuthResponse)
     }
 
-    "handle tokens request failure from password grant" in new TestParameters {
+    "handle tokens request failure from password grant (orgId)" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.id, "user", "pass"))
+      resp must beNone
+    }
+
+    "handle tokens request failure from password grant (fqon)" in new TestParameters {
       val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
       val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.fqon, "user", "pass"))
       resp must beNone
     }
 
@@ -523,7 +576,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -536,7 +589,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.fqon, testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -549,7 +602,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.fqon, testToken))
       resp must_== INVALID_TOKEN
     }
 
@@ -562,7 +615,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.id, testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -575,7 +628,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.id, testToken))
       resp must_== INVALID_TOKEN
     }
 
@@ -786,7 +839,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
+      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant), testOrg.id)
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,

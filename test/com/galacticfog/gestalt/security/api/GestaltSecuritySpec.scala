@@ -10,7 +10,7 @@ import org.specs2.mutable._
 import org.specs2.runner._
 import org.specs2.specification.Scope
 import play.api.http.{HeaderNames, ContentTypeOf, Writeable}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws._
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits, FakeApplication, WithApplication}
 import play.test.FakeRequest
@@ -106,6 +106,16 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
     }
 
+    "properly use apiKey and apiSecret for authentication on POST(form)" in new FullyMockedWSClient {
+      await(security.postForm[JsValue]("/", Map()))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
+    }
+
+    "not use apiKey and apiSecret for authentication on POSTNoAuth(form)" in new FullyMockedWSClient {
+      await(security.postFormNoAuth[JsValue]("/", Map()))
+      there were no(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
+    }
+
     "properly use apiKey and apiSecret for authentication on PATCH" in new FullyMockedWSClient {
       await(security.patchJson("/", Json.obj()))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> basicCreds.headerValue)
@@ -129,6 +139,16 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     "properly use token for authentication on POST(body)" in new FullyMockedWSClient {
       await(security.withCreds(tokenCreds).postJson("/",Json.obj()))
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "properly use token for authentication on POST(form)" in new FullyMockedWSClient {
+      await(security.withCreds(tokenCreds).postForm[JsValue]("/", Map()))
+      there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
+    }
+
+    "not use token for authentication on POSTNoAuth(form)" in new FullyMockedWSClient {
+      await(security.withCreds(tokenCreds).postFormNoAuth[JsValue]("/", Map()))
+      there were no(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
     "properly use token for authentication on PATCH" in new FullyMockedWSClient {
