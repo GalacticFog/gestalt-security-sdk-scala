@@ -89,7 +89,9 @@ object GestaltSecurityConfig {
         protocol <- (json \ "protocol").validate[Protocol]
         hostname <- (json \ "hostname").validate[String]
         port <- (json \ "port").validate[Int]
-      } yield GestaltSecurityConfig(FRAMEWORK_SECURITY_MODE,protocol,hostname,port,appId = None,apiKey = None,apiSecret = None))
+        apiKey <- (json \ "apiKey").validate[String]
+        apiSecret <- (json \ "apiSecret").validate[String]
+      } yield GestaltSecurityConfig(FRAMEWORK_SECURITY_MODE,protocol,hostname,port,appId = None,apiKey = Some(apiKey),apiSecret = Some(apiSecret)))
     }
   }
 
