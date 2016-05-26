@@ -187,6 +187,8 @@ object JsonImports {
     }
   }
 
+  implicit val oauthErrorFormat = Json.format[OAuthError]
+
   val exceptionReads = new Reads[SecurityRESTException] {
     override def reads(json: JsValue): JsResult[SecurityRESTException] = {
       (json \ "code").asOpt[Int] match {

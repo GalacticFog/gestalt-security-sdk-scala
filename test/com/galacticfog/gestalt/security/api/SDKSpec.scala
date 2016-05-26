@@ -340,6 +340,15 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       deleted must_== DeleteResult(true)
     }
 
+    "properly parse and throw OAuth error responses" in new TestParameters {
+      val url = baseUrl + "/something"
+      val route = (GET, url, Action {
+        BadRequest(Json.toJson(OAuthError("invalid_grant","grant was invalid")))
+      })
+      val security = getSecurity(route)
+      await(security.get[GestaltOrg]("something")) must throwA[OAuthError](".*grant was invalid.*")
+    }
+
     "returns UnknownAPIException on weird JSON error responses" in new TestParameters {
       val url = baseUrl + "/something"
       val route = (GET, url, Action {
