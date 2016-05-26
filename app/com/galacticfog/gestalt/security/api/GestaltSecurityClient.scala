@@ -175,6 +175,6 @@ object GestaltSecurityClient {
     new GestaltSecurityClient(
       client = WS.client, protocol = securityConfig.protocol,
       hostname = securityConfig.hostname, port = securityConfig.port,
-      creds = GestaltBasicCredentials(securityConfig.apiKey.getOrElse("anonymous"),securityConfig.apiSecret.getOrElse(""))
+      creds = GestaltBasicCredentials(securityConfig.apiKey,securityConfig.apiSecret)
     )
 }
