@@ -13,8 +13,8 @@ case class GestaltAccount(id: UUID,
                           firstName: String,
                           lastName: String,
                           description: Option[String],
-                          email: String,
-                          phoneNumber: String,
+                          email: Option[String],
+                          phoneNumber: Option[String],
                           directory: GestaltDirectory)
   extends GestaltResource
   with PatchSupport[GestaltAccount]
@@ -33,9 +33,46 @@ case class GestaltAccount(id: UUID,
   def listGroupMemberships()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     GestaltAccount.listGroupMemberships(id)
   }
+
+  def generateAPICredentials(orgId: Option[UUID] = None)(implicit client: GestaltSecurityClient): Future[GestaltAPIKey] = {
+    GestaltAccount.generateAPICredentials(id, orgId)
+  }
+}
+
+case class GestaltAPIKey(apiKey: String,
+                         apiSecret: Option[String],
+                         accountId: UUID,
+                         disabled: Boolean) extends GestaltResource {
+
+  def delete()(implicit client: GestaltSecurityClient): Future[Boolean] =
+    GestaltAPIKey.delete(apiKey)
+
+  override def id: UUID = UUID.fromString(apiKey)
+  override def description: Option[String] = None
+  override def href: String = s"/apiKeys/${id}"
+  override def name: String = s"apiKey-${id}"
+}
+
+case object GestaltAPIKey {
+
+  def delete(apiKey: String)
+            (implicit client: GestaltSecurityClient): Future[Boolean] = {
+    client.deleteDR(s"apiKeys/${apiKey}") map {_.wasDeleted}
+  }
+
 }
 
 case object GestaltAccount {
+
+  def generateAPICredentials(accountId: UUID, orgId: Option[UUID] = None)
+                            (implicit client: GestaltSecurityClient): Future[GestaltAPIKey] = {
+    client.post[GestaltAPIKey](
+      s"accounts/${accountId}/apiKeys",
+      orgId map {id => Json.obj(
+        "orgId" -> id.toString
+      )} getOrElse Json.obj()
+    )
+  }
 
   def listGroupMemberships(accountId: UUID)
                           (implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
@@ -46,15 +83,18 @@ case object GestaltAccount {
     client.get[GestaltAccount]("accounts/self")
   }
 
-  def deregisterPhoneNumber(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+  def deregisterPhoneNumber(accountId: UUID)
+                           (implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.delete[GestaltAccount](s"accounts/${accountId}/phoneNumber")
   }
 
-  def deregisterEmail(accountId: UUID)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+  def deregisterEmail(accountId: UUID)
+                     (implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.delete[GestaltAccount](s"accounts/${accountId}/email")
   }
 
-  def getAccountGroups(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+  def getAccountGroups(accountId: UUID)
+                      (implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.get[Seq[GestaltGroup]](s"accounts/${accountId}/groups")
   }
 
@@ -62,15 +102,18 @@ case object GestaltAccount {
     client.get[Seq[GestaltAccount]](s"accounts")
   }
 
-  def deleteAccount(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+  def deleteAccount(accountId: UUID)
+                   (implicit client: GestaltSecurityClient): Future[Boolean] = {
     client.deleteDR(s"accounts/${accountId}") map {_.wasDeleted}
   }
 
-  def updateAccount(accountId: UUID, update: GestaltAccountUpdate)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
+  def updateAccount(accountId: UUID, update: GestaltAccountUpdate)
+                   (implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.patch[GestaltAccount](s"accounts/${accountId}", Json.toJson(update))
   }
 
-  def getById(accountId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
+  def getById(accountId: UUID)
+             (implicit client: GestaltSecurityClient): Future[Option[GestaltAccount]] = {
     client.getOpt[GestaltAccount](s"accounts/${accountId}")
   }
 
@@ -79,25 +122,25 @@ case object GestaltAccount {
 case class GestaltAccountCreate(username: String,
                                 firstName: String,
                                 lastName: String,
-                                email: String,
-                                phoneNumber: String,
+                                email: Option[String] = None,
+                                phoneNumber: Option[String] = None,
                                 credential: GestaltAccountCredential,
                                 groups: Option[Seq[UUID]] = None,
                                 description: Option[String] = None)
 
-case class GestaltAccountUpdate(username: Option[String],
-                                description: Option[String],
-                                email: Option[String],
-                                phoneNumber: Option[String],
-                                credential: Option[GestaltAccountCredential],
-                                firstName: Option[String],
-                                lastName: Option[String])
+case class GestaltAccountUpdate(username: Option[String] = None,
+                                description: Option[String] = None,
+                                email: Option[String] = None,
+                                phoneNumber: Option[String] = None,
+                                credential: Option[GestaltAccountCredential] = None,
+                                firstName: Option[String] = None,
+                                lastName: Option[String] = None)
 
 case class GestaltAccountCreateWithRights(username: String,
                                           firstName: String,
                                           lastName: String,
-                                          email: String,
-                                          phoneNumber: String,
+                                          email: Option[String] = None,
+                                          phoneNumber: Option[String] = None,
                                           credential: GestaltAccountCredential,
                                           groups: Option[Seq[UUID]] = None,
                                           rights: Option[Seq[GestaltGrantCreate]] = None,

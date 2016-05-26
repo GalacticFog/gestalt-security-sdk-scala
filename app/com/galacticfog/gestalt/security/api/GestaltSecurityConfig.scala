@@ -37,12 +37,12 @@ case class GestaltSecurityConfig(mode: GestaltSecurityMode,
                                  protocol: Protocol,
                                  hostname: String,
                                  port: Int,
-                                 apiKey: Option[String],
-                                 apiSecret: Option[String],
+                                 apiKey: String,
+                                 apiSecret: String,
                                  appId: Option[UUID]) extends ConfigEntity {
-  def isWellDefined: Boolean = !hostname.isEmpty && port > 0 && (mode match {
+  def isWellDefined: Boolean = !hostname.isEmpty && !apiKey.isEmpty && !apiSecret.isEmpty && port > 0 && (mode match {
     case DELEGATED_SECURITY_MODE =>
-      apiKey.exists(_.isEmpty == false) && apiSecret.exists(_.isEmpty == false) && appId.isDefined
+      appId.isDefined
     case FRAMEWORK_SECURITY_MODE =>
       true
   })
@@ -84,12 +84,14 @@ object GestaltSecurityConfig {
         appId <- (json \ "appId").validate[UUID]
         apiKey <- (json \ "apiKey").validate[String]
         apiSecret <- (json \ "apiSecret").validate[String]
-      } yield GestaltSecurityConfig(DELEGATED_SECURITY_MODE,protocol,hostname,port,appId = Some(appId),apiKey = Some(apiKey),apiSecret = Some(apiSecret))
+      } yield GestaltSecurityConfig(DELEGATED_SECURITY_MODE,protocol,hostname,port,appId = Some(appId),apiKey = apiKey, apiSecret = apiSecret)
       delegated orElse(for {
         protocol <- (json \ "protocol").validate[Protocol]
         hostname <- (json \ "hostname").validate[String]
         port <- (json \ "port").validate[Int]
-      } yield GestaltSecurityConfig(FRAMEWORK_SECURITY_MODE,protocol,hostname,port,appId = None,apiKey = None,apiSecret = None))
+        apiKey <- (json \ "apiKey").validate[String]
+        apiSecret <- (json \ "apiSecret").validate[String]
+      } yield GestaltSecurityConfig(FRAMEWORK_SECURITY_MODE,protocol,hostname,port,appId = None,apiKey = apiKey,apiSecret = apiSecret))
     }
   }
 
@@ -123,12 +125,14 @@ object GestaltSecurityConfig {
       key    <- getEnv(eKEY)
       secret <- getEnv(eSECRET)
       appId  <- getEnv(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
-    } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=Some(key), apiSecret=Some(secret), appId=Some(appId))
+    } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, appId=Some(appId))
     delegated.orElse(for {
       proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
       host   <- getEnv(eHOSTNAME)
       port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
-    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, None, None, None))
+      key    <- getEnv(eKEY)
+      secret <- getEnv(eSECRET)
+    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None))
   }
 
   def getSecurityConfigFromFile: Option[GestaltSecurityConfig] = {

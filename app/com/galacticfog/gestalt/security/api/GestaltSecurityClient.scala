@@ -49,9 +49,14 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     postJson(uri) map validate[T]
   }
 
-  def postForm[T](endpoint: String, fields: Map[String, String])(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+  def postFormNoAuth[T](endpoint: String, fields: Map[String, String])(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
     client
       .url(genUri(endpoint))
+      .post(fields.mapValues(Seq(_))) flatMap processResponse map validate[T]
+  }
+
+  def postForm[T](endpoint: String, fields: Map[String, String])(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    addAuth(client.url(genUri(endpoint)))
       .post(fields.mapValues(Seq(_))) flatMap processResponse map validate[T]
   }
 
@@ -98,7 +103,7 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
       }
       case x if x >= 400 && x < 500 =>
         Try(Json.parse(response.body)) match {
-          case Success(json) => json.asOpt[SecurityRESTException] match {
+          case Success(json) => json.asOpt[SecurityRESTException] orElse json.asOpt[OAuthError] match {
             case Some(ex) => Future.failed(ex)
             case None => Future.failed(UnknownAPIException(x,"unknown",s"could not parse to SecurityRESTException: ${response.body}",""))
           }
@@ -114,10 +119,7 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     else endpoint
   }
 
-  private def addAuth(rh: WSRequestHolder) = this.creds match {
-    case basic: GestaltBasicCredentials  => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
-    case basic: GestaltBearerCredentials => rh.withHeaders(HeaderNames.AUTHORIZATION -> creds.headerValue)
-  }
+  private def addAuth(rh: WSRequestHolder) = rh.withHeaders(HeaderNames.AUTHORIZATION -> this.creds.headerValue)
 
   private def genRequest(sendingJson: Boolean, endpoint: String): WSRequestHolder = {
     val rh = addAuth( client.url(genUri(endpoint)) )
@@ -173,6 +175,6 @@ object GestaltSecurityClient {
     new GestaltSecurityClient(
       client = WS.client, protocol = securityConfig.protocol,
       hostname = securityConfig.hostname, port = securityConfig.port,
-      creds = GestaltBasicCredentials(securityConfig.apiKey.getOrElse("anonymous"),securityConfig.apiSecret.getOrElse(""))
+      creds = GestaltBasicCredentials(securityConfig.apiKey,securityConfig.apiSecret)
     )
 }

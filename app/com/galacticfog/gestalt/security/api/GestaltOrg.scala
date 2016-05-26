@@ -157,40 +157,6 @@ case object GestaltOrg {
       None
   }
 
-  def grantPasswordToken(orgFQON: String, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[AccessTokenResponse]] = {
-    client.postForm[AccessTokenResponse](s"${orgFQON}/oauth/issue", Map(
-      "grant_type" -> "password",
-      "username"  -> username,
-      "password"  -> password
-    )) map Option.apply recover noneWithLog(s"failure retrieving password grant token from org ${orgFQON}")
-  }
-
-  def grantPasswordToken(orgId: UUID, username: String, password: String)(implicit client: GestaltSecurityClient): Future[Option[AccessTokenResponse]] = {
-    client.postForm[AccessTokenResponse](s"orgs/${orgId}/oauth/issue", Map(
-      "grant_type" -> "password",
-      "username"  -> username,
-      "password"  -> password
-    )) map Option.apply recover noneWithLog(s"failure retrieving password grant token from org ${orgId}")
-  }
-
-  def validateToken(orgFQON: String, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"${orgFQON}/oauth/inspect", Map(
-      "token" -> token.toString
-    ))
-  }
-
-  def validateToken(orgId: UUID, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"orgs/${orgId}/oauth/inspect", Map(
-      "token" -> token.toString
-    ))
-  }
-
-  def validateToken(token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"oauth/inspect", Map(
-      "token" -> token.toString
-    ))
-  }
-
   def authorizeFrameworkUser(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
     client.withCreds(creds).postEmpty[GestaltAuthResponse](s"auth")
       .map(Option.apply)

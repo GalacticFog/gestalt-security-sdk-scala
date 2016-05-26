@@ -67,8 +67,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       firstName = "John",
       lastName = "Perry",
       None,
-      email = "jperry202@cdf.cu",
-      phoneNumber = "850-867-5309",
+      email = Some("jperry202@cdf.cu"),
+      phoneNumber = Some("850-867-5309"),
       directory = testDir
     )
     val testMapping = GestaltAccountStoreMapping(UUID.randomUUID,"Staff Members",Some("Staff members authorized for this app."),DIRECTORY,testDir.id,testApp.id,false,false)
@@ -340,6 +340,15 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       deleted must_== DeleteResult(true)
     }
 
+    "properly parse and throw OAuth error responses" in new TestParameters {
+      val url = baseUrl + "/something"
+      val route = (GET, url, Action {
+        BadRequest(Json.toJson(OAuthError("invalid_grant","grant was invalid")))
+      })
+      val security = getSecurity(route)
+      await(security.get[GestaltOrg]("something")) must throwA[OAuthError](".*grant was invalid.*")
+    }
+
     "returns UnknownAPIException on weird JSON error responses" in new TestParameters {
       val url = baseUrl + "/something"
       val route = (GET, url, Action {
@@ -371,8 +380,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     "support sync against org root" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, None, Seq())
       val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, None, Seq(chld.getLink))
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, "jdee@org", "", testDir)
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, "jdoe@chld.org", "", testDir)
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, Some("jdee@org"), None, testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, Some("jdoe@chld.org"), None, testDir)
       val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", None, testDir, false, accounts = Seq(john.getLink(), jane.getLink()))
       val rootUrl = baseUrl + "/sync"
       val route = (GET, rootUrl, Action {
@@ -392,8 +401,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "support sync against suborg" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, None, Seq())
-      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, "jdee@org", "", testDir)
-      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, "jdoe@chld.org", "", testDir)
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, Some("jdee@org"), None, testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, Some("jdoe@chld.org"), None, testDir)
       val awayTeam = GestaltGroup(UUID.randomUUID(), "away-team", None, testDir, false, accounts = Seq(john.getLink(), jane.getLink()))
       val chldUrl = baseUrl + s"/orgs/${chld.id}/sync"
       val route = (GET, chldUrl, Action {
@@ -420,6 +429,104 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       org must_== returnedOrg
     }
 
+    "generate api credentials with no org" in new TestParameters {
+      val url = baseUrl + s"/accounts/${testAccount.id}/apiKeys"
+      val returnedAPIKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        disabled = false
+      )
+      val route = (POST, url, Action(BodyParsers.parse.json) { request =>
+        (request.body \ "orgId").asOpt[UUID] match {
+          case None => Ok(Json.toJson(returnedAPIKey))
+          case _ => BadRequest(Json.obj())
+        }
+      })
+      implicit val security = getSecurityJson(route)
+      val key = await(testAccount.generateAPICredentials())
+      key must_== returnedAPIKey
+    }
+
+    "generate api credentials with org" in new TestParameters {
+      val url = baseUrl + s"/accounts/${testAccount.id}/apiKeys"
+      val returnedAPIKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        disabled = false
+      )
+      val route = (POST, url, Action(BodyParsers.parse.json) { request =>
+        (request.body \ "orgId").asOpt[UUID] match {
+          case Some(testOrg.id) => Ok(Json.toJson(returnedAPIKey))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurityJson(route)
+      val key = await(testAccount.generateAPICredentials(Some(testOrg.id)))
+      key must_== returnedAPIKey
+    }
+
+    "delete api key" in new TestParameters {
+      val testKey = GestaltAPIKey(
+        apiKey = UUID.randomUUID().toString,
+        apiSecret = Some("reallylongpassword"),
+        accountId = testAccount.id,
+        disabled = false
+      )
+      val url = baseUrl + s"/apiKeys/${testKey.id}"
+      val route = (DELETE, url, Action {request =>
+        Ok(Json.toJson(DeleteResult(true)))
+      })
+      implicit val security = getSecurity(route)
+      await(testKey.delete()) must beTrue
+    }
+
+    "generate tokens against orgId from client credentials grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val now = DateTime.now()
+      val newToken = OpaqueToken(UUID.randomUUID(),ACCESS_TOKEN)
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("grant_type") == Some(Seq("client_credentials")) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.id))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "generate tokens against FQON from client credentials grants using oauth2 standard" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val now = DateTime.now()
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("grant_type") == Some(Seq("client_credentials")) => Ok(Json.toJson(testTokenAuthResponse))
+          case _ => BadRequest("was expecting form data")
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.fqon))
+      resp must beSome(testTokenAuthResponse)
+    }
+
+    "handle tokens request failure from client credentials grant (orgId)" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.id))
+      resp must beNone
+    }
+
+    "handle tokens request failure from client credentials grant (fqon)" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantClientToken(testOrg.fqon))
+      resp must beNone
+    }
+
     "generate tokens against orgId from password grants using oauth2 standard" in new TestParameters {
       val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
       val now = DateTime.now()
@@ -433,7 +540,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.id, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.id, "user", "pass"))
       resp must beSome(testTokenAuthResponse)
     }
 
@@ -449,15 +556,23 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.fqon, "user", "pass"))
       resp must beSome(testTokenAuthResponse)
     }
 
-    "handle tokens request failure from password grant" in new TestParameters {
+    "handle tokens request failure from password grant (orgId)" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/issue"
+      val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
+      implicit val security = getSecurity(route)
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.id, "user", "pass"))
+      resp must beNone
+    }
+
+    "handle tokens request failure from password grant (fqon)" in new TestParameters {
       val url = baseUrl + s"/${testOrg.fqon}/oauth/issue"
       val route = (POST, url, Action { BadRequest(Json.obj("error" -> "invalid_grant")) })
       implicit val security = getSecurity(route)
-      val resp = await(GestaltOrg.grantPasswordToken(testOrg.fqon, "user", "pass"))
+      val resp = await(GestaltToken.grantPasswordToken(testOrg.fqon, "user", "pass"))
       resp must beNone
     }
 
@@ -470,7 +585,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -483,7 +598,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.fqon, testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -496,7 +611,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.fqon, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.fqon, testToken))
       resp must_== INVALID_TOKEN
     }
 
@@ -509,7 +624,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.id, testToken))
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
@@ -522,7 +637,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         }
       })
       implicit val security = getSecurity(route)
-      val resp: TokenIntrospectionResponse = await(GestaltOrg.validateToken(testOrg.id, testToken))
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.id, testToken))
       resp must_== INVALID_TOKEN
     }
 
@@ -733,7 +848,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup), rights = Seq(testGrant), testOrg.id)
+      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant), testOrg.id)
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
@@ -761,8 +876,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "test", description = None, directory = testDir, disabled = false, accounts = Seq())
 
       val accountList = Seq(
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir),
-        GestaltAccount(UUID.randomUUID(), "", "", "", None, "", "", testDir)
+        GestaltAccount(UUID.randomUUID(), "", "", "", None, None, None, testDir),
+        GestaltAccount(UUID.randomUUID(), "", "", "", None, None, None, testDir)
       )
       mockGet(
         uri = s"groups/${testGroup.id}/accounts",
@@ -780,7 +895,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val addId = UUID.randomUUID()
       val remId = UUID.randomUUID()
 
-      val updatedAccountList = Seq(GestaltAccount(addId, "", "", "", None, "", "", testDir).getLink())
+      val updatedAccountList = Seq(GestaltAccount(addId, "", "", "", None, None, None, testDir).getLink())
       mockPatch(
         uri = s"groups/${testGroup.id}/accounts",
         payload = Json.toJson(Seq(
@@ -849,8 +964,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list all accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "mary", "M", "B", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "john", "J", "S", None, None, None, testDir)
       val url = baseUrl + s"/apps/${testApp.id}/accounts"
       val route = (GET, url, Action { request =>
         Ok(Json.toJson(Seq(acc1,acc2)))
@@ -1185,8 +1300,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list directory accounts" in new TestParameters {
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, None, None, testDir)
       val testResp = Json.toJson(Seq(acc1, acc2))
       val url = baseUrl + s"/directories/${testDir.id}/accounts"
       val route = (GET, url, Action {
@@ -1199,8 +1314,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "list directory accounts with override credentials" in new TestParameters {
       implicit val security = getMockSecurity
-      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, "", "", testDir)
-      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, "", "", testDir)
+      val acc1 = GestaltAccount(id = UUID.randomUUID, "user1", "", "", None, None, None, testDir)
+      val acc2 = GestaltAccount(id = UUID.randomUUID, "user2", "", "", None, None, None, testDir)
       val testResp = Seq(acc1, acc2)
       mockGet(
         uri = s"directories/${testDir.id}/accounts",
@@ -1213,12 +1328,9 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "create user failure returns failed try" in new TestParameters {
       val createRequest = GestaltAccountCreate(
-        username = "",
-        description = None,
+        username = "mock-fail",
         firstName = "",
         lastName = "",
-        email = "",
-        phoneNumber = "",
         credential = GestaltPasswordCredential("")
       )
       val url = baseUrl + s"/directories/${testDir.id}/accounts"

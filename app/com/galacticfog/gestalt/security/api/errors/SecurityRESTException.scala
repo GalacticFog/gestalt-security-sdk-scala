@@ -6,6 +6,10 @@ sealed abstract class SecurityRESTException(val code: Int, val resource: String,
   override def getMessage(): String = s"code ${code}: ${message}"
 }
 
+case class OAuthError(error: String, error_description: String) extends Throwable {
+  override def getMessage: String = error + ":" + error_description
+}
+
 case class BadRequestException(override val resource: String, override val message: String, override val developerMessage: String) extends SecurityRESTException(400,resource,message,developerMessage)
 case class UnauthorizedAPIException(override val resource: String, override val message: String, override val developerMessage: String) extends SecurityRESTException(401,resource,message,developerMessage)
 case class ForbiddenAPIException(override val message: String, override val developerMessage: String) extends SecurityRESTException(403,"",message,developerMessage)
