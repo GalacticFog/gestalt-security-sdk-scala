@@ -103,7 +103,7 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
       }
       case x if x >= 400 && x < 500 =>
         Try(Json.parse(response.body)) match {
-          case Success(json) => json.asOpt[SecurityRESTException] orElse json.asOpt[OAuthError] match {
+          case Success(json) => json.asOpt[OAuthError] orElse json.asOpt[SecurityRESTException] match {
             case Some(ex) => Future.failed(ex)
             case None => Future.failed(UnknownAPIException(x,"unknown",s"could not parse to SecurityRESTException: ${response.body}",""))
           }
