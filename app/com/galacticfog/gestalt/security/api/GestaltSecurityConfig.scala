@@ -113,7 +113,10 @@ object GestaltSecurityConfig {
    * @return Some(config) if a security configuration was found, None otherwise
    */
   def getSecurityConfig: Option[GestaltSecurityConfig] = {
-    getSecurityConfigFromEnv orElse getSecurityConfigFromFile
+    getSecurityConfigFromEnv orElse {
+      Logger.info("> could not load security configuration from environment variables")
+      getSecurityConfigFromFile
+    }
   }
 
   def getSecurityConfigFromEnv: Option[GestaltSecurityConfig] = {
