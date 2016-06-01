@@ -6,7 +6,7 @@ sealed abstract class SecurityRESTException(val code: Int, val resource: String,
   override def getMessage(): String = s"code ${code}: ${message}"
 }
 
-case class OAuthError(error: String, error_description: String) extends Throwable {
+case class OAuthError(error: String, error_description: String, code: Option[Int] = Some(400)) extends Throwable {
   override def getMessage: String = error + ":" + error_description
 }
 
