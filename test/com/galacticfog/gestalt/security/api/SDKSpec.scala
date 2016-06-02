@@ -641,6 +641,20 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       resp must_== INVALID_TOKEN
     }
 
+    "delete tokens by id" in new TestParameters {
+      implicit val security = getMockSecurity
+      val tokenId = UUID.randomUUID()
+      security.deleteDR(s"accessTokens/${tokenId}") returns Future.successful(DeleteResult(true))
+      await(GestaltToken.deleteToken(tokenId, ACCESS_TOKEN)) must beTrue
+    }
+
+    "return false on deleting non-existant token" in new TestParameters {
+      implicit val security = getMockSecurity
+      val tokenId = UUID.randomUUID()
+      security.deleteDR(s"accessTokens/${tokenId}") returns Future.successful(DeleteResult(false))
+      await(GestaltToken.deleteToken(tokenId, ACCESS_TOKEN)) must beFalse
+    }
+
     "get an org by ID" in new TestParameters {
       val url = baseUrl + s"/orgs/${testOrg.id}"
       val route = (GET, url, Action {
