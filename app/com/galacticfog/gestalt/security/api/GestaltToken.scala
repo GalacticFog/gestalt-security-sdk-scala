@@ -20,6 +20,7 @@ trait GestaltToken extends GestaltResource {
 }
 
 object GestaltToken {
+
   sealed trait TokenType
   final case object ACCESS_TOKEN extends TokenType
 
@@ -27,6 +28,19 @@ object GestaltToken {
     case e: Throwable =>
       Logger.info(msg, e)
       None
+  }
+
+  /**
+    * Delete a token
+    * @param tokenId UUID for the token
+    * @param tokenType Token type (e.g., access, refresh)
+    * @param client Gestalt security client
+    * @return DeleteResult indicating whether the delete was successful (true) or whether the token didn't exist (false). Any error will result in an exception.
+    */
+  def deleteToken(tokenId: UUID, tokenType: TokenType)(implicit client: GestaltSecurityClient): Future[Boolean] = {
+    tokenType match {
+      case ACCESS_TOKEN => client.deleteDR(s"accessTokens/${tokenId}") map {_.wasDeleted}
+    }
   }
 
   /**
