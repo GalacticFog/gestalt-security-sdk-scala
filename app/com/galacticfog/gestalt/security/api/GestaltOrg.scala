@@ -54,6 +54,10 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
 
   def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = GestaltOrg.listGroups(id)
 
+  def listGroupsByName(name: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    GestaltOrg.listGroupsByName(id, name)
+  }
+
   def listAccountStores()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccountStoreMapping]] = {
     GestaltOrg.listAccountStores(id)
   }
@@ -222,6 +226,10 @@ case object GestaltOrg {
 
   def listGroups(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
     client.get[Seq[GestaltGroup]](s"orgs/${orgId}/groups")
+  }
+
+  def listGroupsByName(orgId: UUID, name: String)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.get[Seq[GestaltGroup]](s"orgs/${orgId}/groups?name=${name}")
   }
 
   def getById(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {

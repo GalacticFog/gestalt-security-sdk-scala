@@ -880,6 +880,18 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       newGroup must_== testGroup
     }
 
+    "list groups for an org by name" in new TestParameters {
+      val group1 = GestaltGroup(id = UUID.randomUUID, name = "group1", description = None, directory = testDir, disabled = false, accounts = Seq())
+      val group2 = GestaltGroup(id = UUID.randomUUID, name = "group2", description = None, directory = testDir, disabled = false, accounts = Seq())
+      val testResp = Json.toJson( Seq(group1,group2) )
+      val url = baseUrl + s"/orgs/${testOrg.id}/groups?name=group"
+      val route = (GET, url, Action { Ok(testResp) })
+      implicit val security = getSecurity(route)
+
+      val groups = await(testOrg.listGroupsByName("group"))
+      groups must_== Seq(group1,group2)
+    }
+
   }
 
   "GestaltGroup" should {
