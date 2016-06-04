@@ -59,6 +59,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       val testHolder = mock[WSRequestHolder]
       testHolder.withHeaders(any) returns testHolder
       testHolder.withAuth(any,any,any) returns testHolder
+      testHolder.withQueryString(any) returns testHolder
       wsclient.url(anyString) returns testHolder
       val response = mock[WSResponse]
       val futureResponse = Future{response}
