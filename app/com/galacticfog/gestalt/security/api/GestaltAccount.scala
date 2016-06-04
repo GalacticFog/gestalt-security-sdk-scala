@@ -98,7 +98,7 @@ case object GestaltAccount {
     client.get[Seq[GestaltGroup]](s"accounts/${accountId}/groups")
   }
 
-  def getAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+  def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     client.get[Seq[GestaltAccount]](s"accounts")
   }
 
@@ -171,8 +171,8 @@ case object GestaltGroup {
     client.get[Seq[GestaltAccount]](s"groups/${groupId}/accounts")
   }
 
-  def getGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.get[Seq[GestaltGroup]]("groups")
+  def listGroups(qs: (String,String)*)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getQuery[Seq[GestaltGroup]]("groups",qs:_*)
   }
 
   def getById(groupId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltGroup]] = {
