@@ -41,11 +41,6 @@ case class GestaltDirectory(id: UUID, name: String, description: Option[String],
     GestaltDirectory.getGroupByName(id, groupName)
   }
 
-  @deprecated("use listAccounts", since = "2.0.0")
-  def getAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    listAccounts()
-  }
-
   def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
     GestaltDirectory.listAccounts(id)
   }
@@ -81,11 +76,6 @@ object GestaltDirectory {
     } recover {
       case notFound: ResourceNotFoundException => None
     }
-  }
-
-  @deprecated("use listAccounts", since = "2.0.0")
-  def getAccounts(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    listAccounts(directoryId)(client)
   }
 
   def listAccounts(directoryId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
