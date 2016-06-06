@@ -50,22 +50,18 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
     GestaltOrg.getServiceApp(id)
   }
 
-  def listAccounts()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = GestaltOrg.listAccounts(id)
+  def listAccounts(qs: (String,String)*)
+                  (implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = GestaltOrg.listAccounts(id,qs:_*)
 
-  def listGroups()(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = GestaltOrg.listGroups(id)
+  def listGroups(qs: (String,String)*)
+                (implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = GestaltOrg.listGroups(id,qs:_*)
 
   def listAccountStores()(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccountStoreMapping]] = {
     GestaltOrg.listAccountStores(id)
   }
 
-  @deprecated("use listDirectories","2.0.0")
-  def getDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] = GestaltOrg.listDirectories(id)
-
   def listDirectories()(implicit client: GestaltSecurityClient): Future[Seq[GestaltDirectory]] =
     GestaltOrg.listDirectories(id)
-
-  @deprecated("use listApps","2.0.0")
-  def getApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.listApps(id)
 
   def listApps()(implicit client: GestaltSecurityClient): Future[Seq[GestaltApp]] = GestaltOrg.listApps(id)
 
@@ -81,8 +77,12 @@ case class GestaltOrg(id: UUID, name: String, fqon: String, description: Option[
     GestaltOrg.listGroupGrants(id, groupId)
   }
 
-  def listOrgs()(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
-    GestaltOrg.listOrgs(id)
+  @deprecated("use listSubOrgs","2.2.0")
+  def listOrgs()(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] =
+    listSubOrgs()(client)
+
+  def listSubOrgs()(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+    GestaltOrg.listSubOrgs(id)
   }
 
 }
@@ -139,10 +139,6 @@ case object GestaltOrg {
     client.post[GestaltGroup](s"orgs/${orgId}/groups", Json.toJson(createRequest))
   }
 
-  def getOrgAccounts(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    client.get[Seq[GestaltAccount]](s"orgs/${orgId}/accounts")
-  }
-
   def createAccount(orgId: UUID, createRequest: GestaltAccountCreateWithRights)(implicit client: GestaltSecurityClient): Future[GestaltAccount] = {
     client.post[GestaltAccount](s"orgs/${orgId}/accounts", Json.toJson(createRequest))
   }
@@ -196,7 +192,11 @@ case object GestaltOrg {
     client.post[GestaltApp](s"orgs/${orgId}/apps",Json.toJson(createRequest))
   }
 
-  def listOrgs(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
+  @deprecated("use listSubOrgs","2.2.0")
+  def listOrgs(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] =
+    listSubOrgs(orgId)(client)
+
+  def listSubOrgs(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltOrg]] = {
     client.get[Seq[GestaltOrg]](s"orgs/${orgId}/orgs")
   }
 
@@ -216,12 +216,12 @@ case object GestaltOrg {
     client.get[Seq[GestaltDirectory]](s"orgs/${orgId}/directories")
   }
 
-  def listAccounts(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
-    client.get[Seq[GestaltAccount]](s"orgs/${orgId}/accounts")
+  def listAccounts(orgId: UUID, qs: (String,String)*)(implicit client: GestaltSecurityClient): Future[Seq[GestaltAccount]] = {
+    client.getQuery[Seq[GestaltAccount]](s"orgs/${orgId}/accounts",qs:_*)
   }
 
-  def listGroups(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
-    client.get[Seq[GestaltGroup]](s"orgs/${orgId}/groups")
+  def listGroups(orgId: UUID, qs: (String,String)*)(implicit client: GestaltSecurityClient): Future[Seq[GestaltGroup]] = {
+    client.getQuery[Seq[GestaltGroup]](s"orgs/${orgId}/groups",qs:_*)
   }
 
   def getById(orgId: UUID)(implicit client: GestaltSecurityClient): Future[Option[GestaltOrg]] = {

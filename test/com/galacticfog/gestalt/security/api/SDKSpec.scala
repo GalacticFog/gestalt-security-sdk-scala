@@ -880,6 +880,45 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       newGroup must_== testGroup
     }
 
+    "list groups for an org by name" in new TestParameters {
+      val testers = GestaltGroup(id = UUID.randomUUID, name = "test-users", description = None, directory = testDir, disabled = false, accounts = Seq())
+      val admins = GestaltGroup(id = UUID.randomUUID, name = "admin-users", description = None, directory = testDir, disabled = false, accounts = Seq())
+      val url = baseUrl + s"/orgs/${testOrg.id}/groups"
+      val route = (GET, url, Action { r =>
+        Ok(Json.toJson(r.getQueryString("name") match {
+          case Some("test-*") => Seq(testers)
+          case Some("admin-*") => Seq(admins)
+          case Some("*-users") => Seq(testers,admins)
+          case _ => Seq()
+        }))
+      } )
+      implicit val security = getSecurity(route)
+
+      await(testOrg.listGroups(("name","*-users"))) must_== Seq(testers,admins)
+      await(testOrg.listGroups(("name","test-*"))) must_== Seq(testers)
+      await(testOrg.listGroups(("name","admin-*"))) must_== Seq(admins)
+      await(testOrg.listGroups(("name","missing"))) must_== Seq()
+    }
+
+    "list accounts for an org by username" in new TestParameters {
+      val jane = GestaltAccount(UUID.randomUUID(), username = "jdee", "Jane", "Dee", None, Some("jdee@org1.com"), None, testDir)
+      val john = GestaltAccount(UUID.randomUUID(), username = "jdoe", "John", "Doe", None, Some("jdoe@org2.com"), None, testDir)
+      val url = baseUrl + s"/orgs/${testOrg.id}/accounts"
+      val route = (GET, url, Action { r =>
+        Ok(Json.toJson(r.getQueryString("username") match {
+          case Some("j*") => Seq(jane,john)
+          case Some("jdee") => Seq(jane)
+          case Some("*doe") => Seq(john)
+          case _ => Seq()
+        }))
+      } )
+      implicit val security = getSecurity(route)
+
+      await(testOrg.listAccounts(("username","j*"))) must containTheSameElementsAs(Seq(jane,john))
+      await(testOrg.listAccounts(("username","jdee"))) must containTheSameElementsAs(Seq(jane))
+      await(testOrg.listAccounts(("username","*doe"))) must containTheSameElementsAs(Seq(john))
+    }
+
   }
 
   "GestaltGroup" should {

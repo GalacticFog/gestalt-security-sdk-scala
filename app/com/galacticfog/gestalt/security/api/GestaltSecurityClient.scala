@@ -64,6 +64,10 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     putJson(uri,payload) map validate[T]
   }
 
+  def getQuery[T](uri: String, qs: (String,String)*)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
+    getJson(uri,qs:_*) map validate[T]
+  }
+
   def get[T](uri: String)(implicit fjs : play.api.libs.json.Reads[T], m: reflect.Manifest[T]): Future[T] = {
     getJson(uri) map validate[T]
   }
@@ -134,8 +138,10 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     s"${protocol}://${hostname}:${port}/${removeLeadingSlash(endpoint)}"
   }
 
-  def getJson(endpoint: String): Future[JsValue] =
-    genRequest(sendingJson = false, endpoint).get() flatMap processResponse
+  def getJson(endpoint: String, qs: (String,String)*): Future[JsValue] =
+    genRequest(sendingJson = false, endpoint)
+      .withQueryString(qs:_*)
+      .get() flatMap processResponse
 
   def postJson(endpoint: String): Future[JsValue] =
     genRequest(sendingJson = false, endpoint).post("") flatMap processResponse
