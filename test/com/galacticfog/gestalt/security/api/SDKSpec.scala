@@ -770,9 +770,19 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       newOrg must_== testOrg
     }
 
-    "create new org with default args will create a user group" in new TestParameters {
+    "parse GestaltOrgCreate without optional fields" in {
+      Json.obj(
+        "name" -> "some-name",
+        "createDefaultUserGroup" -> true
+      ).asOpt[GestaltOrgCreate] must beSome(
+        (c: GestaltOrgCreate) => c.name == "some-name" && c.createDefaultUserGroup == true && c.inheritParentMappings == None && c.description == None
+      )
+    }
+
+    "create new org with default args will create a user group and not inherit parent mappings" in new TestParameters {
       val createRequest = GestaltOrgCreate("some-name")
       createRequest.createDefaultUserGroup must beTrue
+      createRequest.inheritParentMappings must beSome(false)
     }
 
     "authenticate framework users against specified org FQON" in new TestParameters {
