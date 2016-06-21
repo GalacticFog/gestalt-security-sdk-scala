@@ -388,7 +388,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         Ok(Json.toJson(GestaltOrgSync(
           accounts = Seq( jane, john ),
           groups = Seq( awayTeam ),
-          orgs = Seq(root,chld)
+          orgs = Seq(root,chld),
+          admin = testAccount.getLink()
         )))
       })
       implicit val security = getSecurity(route)
@@ -397,6 +398,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       rootSync.accounts must containAllOf(Seq(jane,john))
       rootSync.groups must containAllOf(Seq(awayTeam))
       rootSync.groups(0).accounts.map({_.id}) must containAllOf(Seq(jane.id, john.id))
+      rootSync.admin.id must_== testAccount.id
     }
 
     "support sync against suborg" in new TestParameters {
@@ -409,7 +411,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         Ok(Json.toJson(GestaltOrgSync(
           accounts = Seq(jane,john),
           groups = Seq(awayTeam),
-          orgs = Seq(chld)
+          orgs = Seq(chld),
+          admin = testAccount.getLink()
         )))
       })
       implicit val security = getSecurity(route)
@@ -418,6 +421,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       subSync.accounts must containAllOf(Seq(jane,john))
       subSync.groups must containAllOf(Seq(awayTeam))
       subSync.groups(0).accounts.map({_.id}) must containAllOf(Seq(jane.id, john.id))
+      subSync.admin.id must_== testAccount.id
     }
 
     "return current org" in new TestParameters {
