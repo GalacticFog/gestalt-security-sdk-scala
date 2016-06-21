@@ -377,6 +377,23 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       testOrg.href must_== s"/orgs/${testOrg.id}"
     }
 
+    "admin on sync should be optional" in new TestParameters {
+      val rootUrl = baseUrl + "/sync"
+      val route = (GET, rootUrl, Action {
+        Ok(Json.obj(
+          "accounts" -> Json.arr(),
+          "orgs" -> Json.arr(),
+          "groups" -> Json.arr()
+        ))
+      })
+      implicit val security = getSecurity(route)
+      val rootSync = await(GestaltOrg.syncOrgTree(None))
+      rootSync.orgs must beEmpty
+      rootSync.accounts must beEmpty
+      rootSync.groups must beEmpty
+      rootSync.admin must beNone
+    }
+
     "support sync against org root" in new TestParameters {
       val chld = GestaltOrg(UUID.randomUUID(), "child", "child", None, None, Seq())
       val root = GestaltOrg(UUID.randomUUID(), "root", "root", None, None, Seq(chld.getLink))
@@ -389,7 +406,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
           accounts = Seq( jane, john ),
           groups = Seq( awayTeam ),
           orgs = Seq(root,chld),
-          admin = testAccount.getLink()
+          admin = Some(testAccount.getLink())
         )))
       })
       implicit val security = getSecurity(route)
@@ -398,7 +415,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       rootSync.accounts must containAllOf(Seq(jane,john))
       rootSync.groups must containAllOf(Seq(awayTeam))
       rootSync.groups(0).accounts.map({_.id}) must containAllOf(Seq(jane.id, john.id))
-      rootSync.admin.id must_== testAccount.id
+      rootSync.admin must beSome( (a: ResourceLink) => a.id == testAccount.id )
     }
 
     "support sync against suborg" in new TestParameters {
@@ -412,7 +429,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
           accounts = Seq(jane,john),
           groups = Seq(awayTeam),
           orgs = Seq(chld),
-          admin = testAccount.getLink()
+          admin = Some(testAccount.getLink())
         )))
       })
       implicit val security = getSecurity(route)
@@ -421,7 +438,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       subSync.accounts must containAllOf(Seq(jane,john))
       subSync.groups must containAllOf(Seq(awayTeam))
       subSync.groups(0).accounts.map({_.id}) must containAllOf(Seq(jane.id, john.id))
-      subSync.admin.id must_== testAccount.id
+      subSync.admin must beSome( (a: ResourceLink) => a.id == testAccount.id )
     }
 
     "return current org" in new TestParameters {
