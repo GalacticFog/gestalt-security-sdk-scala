@@ -2,7 +2,7 @@ package com.galacticfog.gestalt.security.plugins
 
 import java.util.UUID
 
-import com.galacticfog.gestalt.security.api.GestaltPasswordCredential
+import com.galacticfog.gestalt.security.api.{GestaltAccount, GestaltAccountUpdate, GestaltGroup, GestaltPasswordCredential}
 
 import scala.util.Try
 
@@ -15,13 +15,13 @@ trait DirectoryPlugin {
                    lastName: String,
                    email: Option[String],
                    phoneNumber: Option[String],
-                   cred: GestaltPasswordCredential): Try[UserAccountAdapter]
+                   cred: GestaltPasswordCredential): Try[GestaltAccount]
 
- def createGroup(name: String, description: Option[String]): Try[UserGroupAdapter]
+ def createGroup(name: String, description: Option[String]): Try[GestaltGroup]
 
- def updateAccount(account: UserAccountAdapter): Try[UserAccountAdapter]
+ def updateAccount(account: GestaltAccountUpdate): Try[GestaltAccount]
 
- def authenticateAccount(account: UserAccountAdapter, plaintext: String): Boolean
+ def authenticateAccount(account: GestaltAccount, plaintext: String): Boolean
 
  /** Directory-specific (i.e., deep) query of accounts, supporting wildcard matches on username, phone number or email address.
    *
@@ -33,10 +33,10 @@ trait DirectoryPlugin {
    * @param email email address query parameter (e.g., "*smith@company.com")
    * @return List of matching accounts (matching the query strings and belonging to the specified group)
    */
- def lookupAccounts(group: Option[UserGroupAdapter] = None,
+ def lookupAccounts(group: Option[GestaltGroup] = None,
                     username: Option[String] = None,
                     phone: Option[String] = None,
-                    email: Option[String] = None): Seq[UserAccountAdapter]
+                    email: Option[String] = None): Seq[GestaltAccount]
 
  /**
    * Directory-specific (i.e., deep) query of groups, supporting wildcard matches on group name.
@@ -46,15 +46,15 @@ trait DirectoryPlugin {
    * @param groupName group name query parameter (e.g., "*-admins")
    * @return List of matching groups
    */
- def lookupGroups(groupName: String): Seq[UserGroupAdapter]
+ def lookupGroups(groupName: String): Seq[GestaltGroup]
 
  def disableAccount(accountId: UUID, disabled: Boolean = true): Unit
 
  def deleteGroup(uuid: UUID): Boolean
 
- def getGroupById(groupId: UUID): Option[UserGroupAdapter]
+ def getGroupById(groupId: UUID): Option[GestaltGroup]
 
- def listGroupAccounts(groupId: UUID): Seq[UserAccountAdapter]
+ def listGroupAccounts(groupId: UUID): Seq[GestaltAccount]
 
  def id: UUID
  def name: String

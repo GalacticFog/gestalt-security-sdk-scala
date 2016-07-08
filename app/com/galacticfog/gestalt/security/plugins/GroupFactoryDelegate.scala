@@ -3,23 +3,24 @@ package com.galacticfog.gestalt.security.plugins
 import java.util.UUID
 
 import com.galacticfog.gestalt.io.util.PatchOp
+import com.galacticfog.gestalt.security.api.{GestaltAccount, GestaltGroup}
 
 import scala.util.Try
 
 trait GroupFactoryDelegate {
 
-  def find(groupId: UUID): Option[UserGroupAdapter]
+  def find(groupId: UUID): Option[GestaltGroup]
   def delete(groupId: UUID): Boolean
-  def create(name: String, description: Option[String], dirId: UUID, maybeParentOrg: Option[UUID]): Try[UserGroupAdapter]
-  def lookupAppGroups(appId: UUID, nameQuery: String): Seq[UserGroupAdapter]
-  def listByDirectoryId(dirId: UUID): Seq[UserGroupAdapter]
-  def listGroupAccounts(groupId: UUID): Seq[UserAccountAdapter]
+  def create(name: String, description: Option[String], dirId: UUID, maybeParentOrg: Option[UUID]): Try[GestaltGroup]
+  def lookupAppGroups(appId: UUID, nameQuery: String): Seq[GestaltGroup]
+  def listByDirectoryId(dirId: UUID): Seq[GestaltGroup]
+  def listGroupAccounts(groupId: UUID): Seq[GestaltAccount]
   def removeAccountFromGroup(groupId: UUID, accountId: UUID): Unit
-  def updateGroupMembership(groupId: UUID, payload: Seq[PatchOp]): Try[Seq[UserAccountAdapter]]
-  def addAccountToGroup(groupId: UUID, accountId: UUID): Try[Seq[UserGroupAdapter]]
-  def getAppGroupMapping(appId: UUID, groupId: UUID): Option[UserGroupAdapter]
-  def queryShadowedAppGroups(appId: UUID, nameQuery: Option[String]): Seq[UserGroupAdapter]
-  def findInDirectoryByName(dirId: UUID, groupName: String): Option[UserGroupAdapter]
+  def updateGroupMembership(groupId: UUID, payload: Seq[PatchOp]): Try[Seq[GestaltAccount]]
+  def addAccountToGroup(groupId: UUID, accountId: UUID): Try[Seq[GestaltGroup]]
+  def getAppGroupMapping(appId: UUID, groupId: UUID): Option[GestaltGroup]
+  def queryShadowedAppGroups(appId: UUID, nameQuery: Option[String]): Seq[GestaltGroup]
+  def findInDirectoryByName(dirId: UUID, groupName: String): Option[GestaltGroup]
   def queryShadowedDirectoryGroups(id: Option[UUID], groupName: Option[String])
 
 }
