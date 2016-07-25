@@ -2,7 +2,7 @@ package com.galacticfog.gestalt.security.plugins
 
 import java.util.UUID
 
-import com.galacticfog.gestalt.security.api.{GestaltAccount, GestaltAccountUpdate, GestaltGroup, GestaltPasswordCredential}
+import com.galacticfog.gestalt.security.api._
 
 import scala.util.Try
 
@@ -19,7 +19,7 @@ trait DirectoryPlugin {
 
  def createGroup(name: String, description: Option[String]): Try[GestaltGroup]
 
- def updateAccount(account: GestaltAccountUpdate): Try[GestaltAccount]
+ def updateAccount(account: GestaltAccount, update: GestaltAccountUpdate): Try[GestaltAccount]
 
  def authenticateAccount(account: GestaltAccount, plaintext: String): Boolean
 

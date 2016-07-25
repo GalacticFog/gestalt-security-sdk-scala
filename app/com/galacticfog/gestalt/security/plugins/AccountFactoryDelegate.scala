@@ -26,13 +26,11 @@ trait AccountFactoryDelegate {
 
 	def find(accountId: UUID): Option[GestaltAccount]
 
+	def delete(accountId: UUID): Try[GestaltAccount]
+
 	def findEnabled(accountId: UUID): Option[GestaltAccount]
 
    def listByDirectoryId(dirId: UUID): List[GestaltAccount]
-
-	def checkPassword(account: GestaltAccount, plaintext: String): Boolean
-
-	def saveAccount(account: GestaltAccountCreate): Try[GestaltAccount]
 
    def updateAccount(account: GestaltAccount, patches: Seq[PatchOp]): Try[GestaltAccount]
 
