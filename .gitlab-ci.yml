@@ -1,0 +1,17 @@
+stages:
+- test
+- publish
+
+cache:
+  key: "$CI_PIPELINE_ID"
+  untracked: true
+
+test:
+  stage: test
+  script:
+    - ./activator clean update test
+
+publish:
+  stage: publish
+  script: 
+    - ./activator publish

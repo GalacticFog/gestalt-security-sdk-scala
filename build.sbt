@@ -31,26 +31,23 @@ scalacOptions ++= Seq(
 )
 
 resolvers ++= Seq(
+  "gestalt-snapshots" at "https://galacticfog.artifactoryonline.com/galacticfog/libs-snapshots-local",
+  "gestalt-releases" at "https://galacticfog.artifactoryonline.com/galacticfog/libs-releases-local",
   "snapshots" at "http://scala-tools.org/repo-snapshots",
-  "releases"  at "http://scala-tools.org/repo-releases")
+  "releases"  at "http://scala-tools.org/repo-releases"
+)
 
-credentials ++= {
-  (for {
-    realm <- sys.env.get("GESTALT_RESOLVER_REALM")
-    username <- sys.env.get("GESTALT_RESOLVER_USERNAME")
-    resolverUrlStr <- sys.env.get("GESTALT_RESOLVER_URL")
-    resolverUrl <- scala.util.Try{url(resolverUrlStr)}.toOption
-    password <- sys.env.get("GESTALT_RESOLVER_PASSWORD")
-  } yield {
-    Seq(Credentials(realm, resolverUrl.getHost, username, password))
-  }) getOrElse Seq()
+publishTo <<= version { (v: String) =>
+  val ao = "https://galacticfog.artifactoryonline.com/galacticfog/"
+  if (v.trim.endsWith("SNAPSHOT"))
+    Some("snapshots" at ao + "libs-snapshots-local/")
+  else
+    Some("releases"  at ao + "libs-releases-local/")
 }
 
-resolvers ++= {
-  sys.env.get("GESTALT_RESOLVER_URL") map {
-    url => Seq("gestalt-resolver" at url)
-  } getOrElse Seq()
-}
+publishMavenStyle := true
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 libraryDependencies += "com.galacticfog" %% "gestalt-io" % "1.0.4"
 
