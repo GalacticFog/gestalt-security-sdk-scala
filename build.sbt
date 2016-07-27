@@ -40,9 +40,9 @@ resolvers ++= Seq(
 publishTo <<= version { (v: String) =>
   val ao = "https://galacticfog.artifactoryonline.com/galacticfog/"
   if (v.trim.endsWith("SNAPSHOT"))
-    Some("snapshots" at ao + "libs-snapshots-local/")
+    Some("publish-gf-snapshots" at ao + "libs-snapshots-local/")
   else
-    Some("releases"  at ao + "libs-releases-local/")
+    Some("publish-gf-releases"  at ao + "libs-releases-local/")
 }
 
 publishMavenStyle := true
