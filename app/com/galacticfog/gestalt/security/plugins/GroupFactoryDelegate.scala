@@ -22,7 +22,7 @@ trait GroupFactoryDelegate {
   def findGroupMemberships(accountId: UUID, groupId: UUID): Option[GroupMembership]
   def removeAccountFromGroup(groupId: UUID, accountId: UUID): Unit
   def updateGroupMembership(groupId: UUID, payload: Seq[PatchOp]): Try[Seq[GestaltAccount]]
-  def addAccountToGroup(groupId: UUID, accountId: UUID): Try[Seq[GestaltGroup]]
+  def addAccountToGroup(groupId: UUID, accountId: UUID): Try[GroupMembership]
   def getAppGroupMapping(appId: UUID, groupId: UUID): Option[GestaltGroup]
   def queryShadowedAppGroups(appId: UUID, nameQuery: Option[String]): Seq[GestaltGroup]
   def findInDirectoryByName(dirId: UUID, groupName: String): Option[GestaltGroup]
