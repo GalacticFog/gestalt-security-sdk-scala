@@ -19,7 +19,7 @@ trait DirectoryPlugin {
 
  def createGroup(name: String, description: Option[String]): Try[GestaltGroup]
 
- def updateAccount(account: GestaltAccountUpdate): Try[GestaltAccount]
+ def updateAccount(account: GestaltAccount, update: GestaltAccountUpdate): Try[GestaltAccount]
 
  def authenticateAccount(account: GestaltAccount, plaintext: String): Boolean
 
