@@ -26,6 +26,8 @@ trait AccountFactoryDelegate {
 
 	def find(accountId: UUID): Option[GestaltAccount]
 
+	def delete(accountId: UUID): Try[GestaltAccount]
+
 	def findEnabled(accountId: UUID): Option[GestaltAccount]
 
    def listByDirectoryId(dirId: UUID): List[GestaltAccount]
