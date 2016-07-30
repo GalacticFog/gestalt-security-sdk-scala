@@ -15,3 +15,20 @@ publish:
   stage: publish
   script: 
     - ./activator publish
+
+github-publish:
+  stage: publish
+  script: 
+    - git remote remove github || true
+    - git remote add github https://$GITHUB_CREDENTIALS@github.com/GalacticFog/gestalt-security-sdk-scala.git
+    - |
+      if [ -z ${CI_BUILD_TAG} ]; then 
+         git push github HEAD:$CI_BUILD_REF_NAME
+      else 
+         git push github $CI_BUILD_TAG
+      fi
+  only:
+    - master
+    - /^release-.*$/
+    - tags
+
