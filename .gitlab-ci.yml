@@ -9,12 +9,12 @@ cache:
 test:
   stage: test
   script:
-    - ./activator clean update test
+    - sbt clean update test
 
 publish:
   stage: publish
   script: 
-    - ./activator publish
+    - sbt publish
 
 github-publish:
   stage: publish
