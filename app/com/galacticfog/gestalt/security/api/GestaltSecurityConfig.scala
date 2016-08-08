@@ -49,6 +49,9 @@ case class GestaltSecurityConfig(mode: GestaltSecurityMode,
 }
 
 object GestaltSecurityConfig {
+
+  type VarGetter = String => Option[String]
+
   implicit val gestaltSecurityProtocolFormat = new Format[Protocol] {
     override def writes(p: Protocol): JsValue = JsString(p.toString)
     override def reads(json: JsValue): JsResult[Protocol] = {
@@ -119,23 +122,28 @@ object GestaltSecurityConfig {
     }
   }
 
-  def getSecurityConfigFromEnv: Option[GestaltSecurityConfig] = {
+  def getSecurityConfigFromEnv(implicit getter: VarGetter = getEnv): Option[GestaltSecurityConfig] = {
     Logger.info("> checking environment for Gestalt security config")
+    def defaultPort: Protocol => Int = _ match {
+      case HTTP => 80
+      case HTTPS => 443
+    }
     val delegated = for {
-      proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
-      host   <- getEnv(eHOSTNAME)
-      port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
-      key    <- getEnv(eKEY)
-      secret <- getEnv(eSECRET)
-      appId  <- getEnv(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
+      proto  <- getter(ePROTOCOL) orElse Some("http") map checkProtocol
+      host   <- getter(eHOSTNAME)
+      port   <- getter(ePORT) flatMap {s => Try{s.toInt}.toOption} orElse Some(defaultPort(proto))
+      key    <- getter(eKEY)
+      secret <- getter(eSECRET)
+      appId  <- getter(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
     } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, appId=Some(appId))
-    delegated.orElse(for {
-      proto  <- getEnv(ePROTOCOL) orElse Some("http") map checkProtocol
-      host   <- getEnv(eHOSTNAME)
-      port   <- getEnv(ePORT) flatMap {s => Try{s.toInt}.toOption}
-      key    <- getEnv(eKEY)
-      secret <- getEnv(eSECRET)
-    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None))
+    lazy val framework = for {
+      proto  <- getter(ePROTOCOL) orElse Some("http") map checkProtocol
+      host   <- getter(eHOSTNAME)
+      port   <- getter(ePORT) flatMap {s => Try{s.toInt}.toOption} orElse Some(defaultPort(proto))
+      key    <- getter(eKEY)
+      secret <- getter(eSECRET)
+    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None)
+    delegated orElse framework
   }
 
   def getSecurityConfigFromFile: Option[GestaltSecurityConfig] = {

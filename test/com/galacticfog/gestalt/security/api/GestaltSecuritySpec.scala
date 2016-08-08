@@ -1,10 +1,13 @@
 package com.galacticfog.gestalt.security.api
 
+import java.util.UUID
+
 import mockws.MockWS
 import org.junit.runner._
 import org.mockito.internal.matchers
 import org.mockito.{ArgumentMatcher, Matchers}
 import org.mockito.internal.matchers.VarargMatcher
+import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 import org.specs2.mock._
 import org.specs2.mutable._
 import org.specs2.runner._
@@ -181,6 +184,57 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
 
     "return null on improperly formatted auth headers" in {
       GestaltAPICredentials.getCredentials("badstring") must beNone
+    }
+
+  }
+
+  "GestaltSecurityConfig" should {
+
+    import GestaltSecurityConfig.ePROTOCOL
+    import GestaltSecurityConfig.eHOSTNAME
+    import GestaltSecurityConfig.ePORT
+    import GestaltSecurityConfig.eKEY
+    import GestaltSecurityConfig.eSECRET
+    import GestaltSecurityConfig.eAPPID
+
+    val envDelegated = Map(
+       ePROTOCOL -> "HTTP",
+       eHOSTNAME -> "hostname",
+       ePORT     -> "9455",
+       eKEY      -> UUID.randomUUID().toString,
+       eSECRET   -> "secret",
+       eAPPID    -> UUID.randomUUID().toString
+    )
+
+    def withMode(mode: => GestaltSecurityMode) = ((_:GestaltSecurityConfig).mode) ^^ be_==(mode)
+    def beWellDefined = ((_:GestaltSecurityConfig).isWellDefined)
+    def withPort(port: => Int) = ((_:GestaltSecurityConfig).port) ^^ be_==(port)
+
+    "return None if env vars are missing on FromEnv" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv must beNone
+    }
+
+    "configure in delegated mode if appId is present" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv(envDelegated.get) must beSome(withMode(DELEGATED_SECURITY_MODE) and withPort(9455) and beWellDefined)
+    }
+
+    "configure in framework mode if appId is not present" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - GestaltSecurityConfig.eAPPID).get) must beSome(withMode(FRAMEWORK_SECURITY_MODE) and withPort(9455) and beWellDefined)
+    }
+
+    "use protocol defined default port" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv(
+        (envDelegated - ePORT + (ePROTOCOL -> "HTTP")).get
+      ) must beSome(withMode(DELEGATED_SECURITY_MODE) and withPort(80) and beWellDefined)
+      GestaltSecurityConfig.getSecurityConfigFromEnv(
+        (envDelegated - ePORT + (ePROTOCOL -> "HTTPS")).get
+      ) must beSome(withMode(DELEGATED_SECURITY_MODE) and withPort(443) and beWellDefined)
+      GestaltSecurityConfig.getSecurityConfigFromEnv(
+        (envDelegated - eAPPID - ePORT + (ePROTOCOL -> "HTTP")).get
+      ) must beSome(withMode(FRAMEWORK_SECURITY_MODE) and withPort(80) and beWellDefined)
+      GestaltSecurityConfig.getSecurityConfigFromEnv(
+        (envDelegated - eAPPID - ePORT + (ePROTOCOL -> "HTTPS")).get
+      ) must beSome(withMode(FRAMEWORK_SECURITY_MODE) and withPort(443) and beWellDefined)
     }
 
   }
