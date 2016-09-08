@@ -29,6 +29,5 @@ github-publish:
       fi
   only:
     - master
-    - /^release-.*$/
     - tags
 
