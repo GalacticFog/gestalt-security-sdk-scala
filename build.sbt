@@ -25,6 +25,8 @@ lazy val root = (project in file(".")).
 
 scalaVersion := "2.11.7"
 
+isSnapshot := true
+
 scalacOptions ++= Seq(
   "-unchecked", "-deprecation", "-feature",
   "-language:postfixOps", "-language:implicitConversions"
