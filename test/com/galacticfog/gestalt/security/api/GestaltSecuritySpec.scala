@@ -32,7 +32,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
   "GestaltSecurityClient" should {
 
     "provide a version" in {
-      GestaltSecurityClient.getVersion must_== "2.2.7-SNAPSHOT"
+      GestaltSecurityClient.getVersion must_== "2.2.7"
     }
 
     "provide a sha" in {
