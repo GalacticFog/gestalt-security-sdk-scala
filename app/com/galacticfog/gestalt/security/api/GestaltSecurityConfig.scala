@@ -124,10 +124,12 @@ object GestaltSecurityConfig {
 
   def getSecurityConfigFromEnv(implicit getter: VarGetter = getEnv): Option[GestaltSecurityConfig] = {
     Logger.info("> checking environment for Gestalt security config")
+    
     def defaultPort: Protocol => Int = _ match {
       case HTTP => 80
       case HTTPS => 443
     }
+    
     val delegated = for {
       proto  <- getter(ePROTOCOL) orElse Some("http") map checkProtocol
       host   <- getter(eHOSTNAME)
@@ -136,6 +138,7 @@ object GestaltSecurityConfig {
       secret <- getter(eSECRET)
       appId  <- getter(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
     } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, appId=Some(appId))
+    
     lazy val framework = for {
       proto  <- getter(ePROTOCOL) orElse Some("http") map checkProtocol
       host   <- getter(eHOSTNAME)
@@ -143,6 +146,7 @@ object GestaltSecurityConfig {
       key    <- getter(eKEY)
       secret <- getter(eSECRET)
     } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None)
+    
     delegated orElse framework
   }
 

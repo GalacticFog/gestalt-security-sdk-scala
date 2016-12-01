@@ -30,6 +30,7 @@ import scala.annotation.meta.field
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Add your spec here.
@@ -205,7 +206,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         'name -> PatchSupport.REMOVE
       ) must throwA[RuntimeException](".*is not Option.*")
     }
-
+    
     "throw an exception on repeated fields" in {
       val test = TestClass("name", "value")
       PatchSupport.genPatch(test,
@@ -268,6 +269,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       await(security.getJson("something")).toString() must_== "{}"
     }
 
+  
+  
     "handle failed API authentication with an exception" in new TestParameters {
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
@@ -305,7 +308,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       val json = Json.toJson(ex)
       val ex2 = json.as[SecurityRESTException]
       ex2 must_== ex
-    }
+    } 
 
     "properly produce and parse JSON for ForbiddenAPIException objects" in {
       val ex = ForbiddenAPIException("foo","bar")
