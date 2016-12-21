@@ -818,7 +818,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
       securityGood.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
         Future{authResponse}
       securityBad.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
@@ -838,7 +838,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
       securityGood.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
         Future{authResponse}
       securityBad.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
@@ -857,7 +857,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
       securityGood.postEmpty[GestaltAuthResponse](s"auth") returns
         Future{authResponse}
       securityBad.postEmpty[GestaltAuthResponse](s"auth") returns
@@ -896,7 +896,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant))
+      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant), testOrg.id)
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
@@ -1226,7 +1226,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "authenticate a user" in new TestParameters {
       val grant = GestaltRightGrant(id = UUID.randomUUID, "launcher:full_access",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant))
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), orgId = UUID.randomUUID())
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
       val route = (POST, url, Action(BodyParsers.parse.json) { request =>
