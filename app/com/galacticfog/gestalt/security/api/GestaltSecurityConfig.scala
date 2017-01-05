@@ -39,7 +39,9 @@ case class GestaltSecurityConfig(mode: GestaltSecurityMode,
                                  port: Int,
                                  apiKey: String,
                                  apiSecret: String,
-                                 appId: Option[UUID]) extends ConfigEntity {
+                                 appId: Option[UUID],
+                                 realm: Option[String] = None) extends ConfigEntity {
+
   def isWellDefined: Boolean = !hostname.isEmpty && !apiKey.isEmpty && !apiSecret.isEmpty && port > 0 && (mode match {
     case DELEGATED_SECURITY_MODE =>
       appId.isDefined
@@ -74,7 +76,8 @@ object GestaltSecurityConfig {
       "port"      -> o.port,
       "apiKey"    -> o.apiKey,
       "apiSecret" -> o.apiSecret,
-      "appId"     -> o.appId
+      "appId"     -> o.appId,
+      "realm"     -> o.realm
     )
   }
 
@@ -106,6 +109,7 @@ object GestaltSecurityConfig {
   val eKEY      = "GESTALT_SECURITY_KEY"
   val eSECRET   = "GESTALT_SECURITY_SECRET"
   val eAPPID    = "GESTALT_SECURITY_APPID"
+  val eREALM    = "GESTALT_SECURITY_REALM"
 
   val eCONFIG     = "GESTALT_SECURITY_CONFIG"
 
@@ -137,7 +141,8 @@ object GestaltSecurityConfig {
       key    <- getter(eKEY)
       secret <- getter(eSECRET)
       appId  <- getter(eAPPID) flatMap {s => Try{UUID.fromString(s)}.toOption}
-    } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, appId=Some(appId))
+      realm  = getter(eREALM)
+    } yield GestaltSecurityConfig(mode=DELEGATED_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, appId=Some(appId), realm = realm)
     
     lazy val framework = for {
       proto  <- getter(ePROTOCOL) orElse Some("http") map checkProtocol
@@ -145,7 +150,8 @@ object GestaltSecurityConfig {
       port   <- getter(ePORT) flatMap {s => Try{s.toInt}.toOption} orElse Some(defaultPort(proto))
       key    <- getter(eKEY)
       secret <- getter(eSECRET)
-    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None)
+      realm   = getter(eREALM)
+    } yield GestaltSecurityConfig(mode=FRAMEWORK_SECURITY_MODE, protocol=proto, hostname=host, port=port, apiKey=key, apiSecret=secret, None, realm = realm)
     
     delegated orElse framework
   }

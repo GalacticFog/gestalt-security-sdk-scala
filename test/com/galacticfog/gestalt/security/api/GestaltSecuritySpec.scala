@@ -2,25 +2,25 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 
+import com.galacticfog.gestalt.security.sdk.BuildInfo
 import mockws.MockWS
 import org.junit.runner._
 import org.mockito.internal.matchers
 import org.mockito.{ArgumentMatcher, Matchers}
 import org.mockito.internal.matchers.VarargMatcher
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
+import org.specs2.matcher.{Expectable, MatchResult, Matcher}
 import org.specs2.mock._
 import org.specs2.mutable._
 import org.specs2.runner._
 import org.specs2.specification.Scope
-import play.api.http.{HeaderNames, ContentTypeOf, Writeable}
+import play.api.http.{ContentTypeOf, HeaderNames, Writeable}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws._
-import play.api.test.{DefaultAwaitTimeout, FutureAwaits, FakeApplication, WithApplication}
+import play.api.test.{DefaultAwaitTimeout, FakeApplication, FutureAwaits, WithApplication}
 import play.test.FakeRequest
 
 import scala.collection.mutable
 import scala.concurrent.Future
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -34,7 +34,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
   "GestaltSecurityClient" should {
 
     "provide a version" in {
-      GestaltSecurityClient.getVersion must_== "2.3.0-SNAPSHOT"
+      GestaltSecurityClient.getVersion must_== BuildInfo.version
     }
 
     "provide a sha" in {
@@ -203,6 +203,9 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     import GestaltSecurityConfig.eKEY
     import GestaltSecurityConfig.eSECRET
     import GestaltSecurityConfig.eAPPID
+    import GestaltSecurityConfig.eREALM
+
+    val testRealm = "override.that.realm:12345"
 
     val envDelegated = Map(
        ePROTOCOL -> "HTTP",
@@ -210,12 +213,14 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
        ePORT     -> "9455",
        eKEY      -> UUID.randomUUID().toString,
        eSECRET   -> "secret",
-       eAPPID    -> UUID.randomUUID().toString
+       eAPPID    -> UUID.randomUUID().toString,
+       eREALM    -> testRealm
     )
 
     def withMode(mode: => GestaltSecurityMode) = ((_:GestaltSecurityConfig).mode) ^^ be_==(mode)
     def beWellDefined = ((_:GestaltSecurityConfig).isWellDefined)
     def withPort(port: => Int) = ((_:GestaltSecurityConfig).port) ^^ be_==(port)
+    def withRealm(maybeRealm: => Option[String]) = ((_:GestaltSecurityConfig).realm) ^^ be_==(maybeRealm)
 
     "return None if env vars are missing on FromEnv" in {
       GestaltSecurityConfig.getSecurityConfigFromEnv must beNone
@@ -226,7 +231,23 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
     }
 
     "configure in framework mode if appId is not present" in {
-      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - GestaltSecurityConfig.eAPPID).get) must beSome(withMode(FRAMEWORK_SECURITY_MODE) and withPort(9455) and beWellDefined)
+      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - eAPPID).get) must beSome(withMode(FRAMEWORK_SECURITY_MODE) and withPort(9455) and beWellDefined)
+    }
+
+    "recognize realm override in delegated mode" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv(envDelegated.get _) must beSome(withRealm(Some(testRealm)))
+    }
+
+    "recognize realm override in framework mode" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - eAPPID).get _) must beSome(withRealm(Some(testRealm)))
+    }
+
+    "default to no realm override in delegated mode" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - eREALM).get _) must beSome(withRealm(None))
+    }
+
+    "default to no realm override in framework mode" in {
+      GestaltSecurityConfig.getSecurityConfigFromEnv( (envDelegated - eAPPID - eREALM).get _) must beSome(withRealm(None))
     }
 
     "use protocol defined default port" in {
