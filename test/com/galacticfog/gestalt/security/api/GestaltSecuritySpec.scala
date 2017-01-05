@@ -21,6 +21,8 @@ import play.test.FakeRequest
 import scala.collection.mutable
 import scala.concurrent.Future
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 /**
  * Add your spec here.
  * You can mock out a whole application including requests, plugins etc.
@@ -32,7 +34,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
   "GestaltSecurityClient" should {
 
     "provide a version" in {
-      GestaltSecurityClient.getVersion must_== "2.2.7-SNAPSHOT"
+      GestaltSecurityClient.getVersion must_== "2.3.0-SNAPSHOT"
     }
 
     "provide a sha" in {
@@ -59,21 +61,26 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
 
     class FullyMockedWSClient extends Scope {
       val wsclient = mock[WSClient]
-      val testHolder = mock[WSRequestHolder]
+      val testHolder = mock[WSRequest]
+
       testHolder.withHeaders(any) returns testHolder
       testHolder.withAuth(any,any,any) returns testHolder
       testHolder.withQueryString(any) returns testHolder
       wsclient.url(anyString) returns testHolder
+      
       val response = mock[WSResponse]
       val futureResponse = Future{response}
+      
       response.status returns 200
       response.statusText returns "Ok"
       response.body returns ""
       response.json returns Json.obj()
+      
       testHolder.get returns futureResponse
-      testHolder.post(Matchers.any[String])(Matchers.any[Writeable[String]], Matchers.any[ContentTypeOf[String]]) returns futureResponse
-      testHolder.put(Matchers.any[String])(Matchers.any[Writeable[String]], Matchers.any[ContentTypeOf[String]]) returns futureResponse
-      testHolder.patch(Matchers.any[String])(Matchers.any[Writeable[String]], Matchers.any[ContentTypeOf[String]]) returns futureResponse
+      
+      testHolder.post(anyString)(any[Writeable[String]]) returns Future.successful(response)
+      testHolder.put(Matchers.any[String])(any[Writeable[String]]) returns Future.successful(response)  // returns futureResponse//(Matchers.any[Writeable[String]], Matchers.any[ContentTypeOf[String]]) returns futureResponse
+      testHolder.patch(Matchers.any[String])(any[Writeable[String]]) returns Future.successful(response) // returns futureResponse//(Matchers.any[Writeable[String]], Matchers.any[ContentTypeOf[String]]) returns futureResponse
       testHolder.delete returns futureResponse
 
       val hostname = "localhost"

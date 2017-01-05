@@ -123,9 +123,9 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
     else endpoint
   }
 
-  private def addAuth(rh: WSRequestHolder) = rh.withHeaders(HeaderNames.AUTHORIZATION -> this.creds.headerValue)
+  private def addAuth(rh: WSRequest) = rh.withHeaders(HeaderNames.AUTHORIZATION -> this.creds.headerValue)
 
-  private def genRequest(sendingJson: Boolean, endpoint: String): WSRequestHolder = {
+  private def genRequest(sendingJson: Boolean, endpoint: String): WSRequest = {
     val rh = addAuth( client.url(genUri(endpoint)) )
     if (sendingJson) rh.withHeaders(
         "Content-Type" -> MimeTypes.JSON,
