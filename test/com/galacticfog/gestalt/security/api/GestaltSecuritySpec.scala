@@ -2,25 +2,25 @@ package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
 
+import com.galacticfog.gestalt.security.sdk.BuildInfo
 import mockws.MockWS
 import org.junit.runner._
 import org.mockito.internal.matchers
 import org.mockito.{ArgumentMatcher, Matchers}
 import org.mockito.internal.matchers.VarargMatcher
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
+import org.specs2.matcher.{Expectable, MatchResult, Matcher}
 import org.specs2.mock._
 import org.specs2.mutable._
 import org.specs2.runner._
 import org.specs2.specification.Scope
-import play.api.http.{HeaderNames, ContentTypeOf, Writeable}
+import play.api.http.{ContentTypeOf, HeaderNames, Writeable}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws._
-import play.api.test.{DefaultAwaitTimeout, FutureAwaits, FakeApplication, WithApplication}
+import play.api.test.{DefaultAwaitTimeout, FakeApplication, FutureAwaits, WithApplication}
 import play.test.FakeRequest
 
 import scala.collection.mutable
 import scala.concurrent.Future
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -34,7 +34,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
   "GestaltSecurityClient" should {
 
     "provide a version" in {
-      GestaltSecurityClient.getVersion must_== "2.3.0-SNAPSHOT"
+      GestaltSecurityClient.getVersion must_== BuildInfo.version
     }
 
     "provide a sha" in {
