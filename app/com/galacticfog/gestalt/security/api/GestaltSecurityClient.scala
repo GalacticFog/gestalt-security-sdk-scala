@@ -171,15 +171,16 @@ object GestaltSecurityClient {
   def apply(wsclient: WSClient, protocol: Protocol, hostname: String, port: Int, creds: GestaltAPICredentials) =
     new GestaltSecurityClient(client = wsclient, protocol = protocol, hostname = hostname, port = port, creds = creds)
 
-  def apply(protocol: Protocol, hostname: String, port: Int, apiKey: String, apiSecret: String)(implicit app: Application) =
-    new GestaltSecurityClient(client = WS.client, protocol = protocol, hostname = hostname, port = port, creds = GestaltBasicCredentials(apiKey, apiSecret))
+  def apply(protocol: Protocol, hostname: String, port: Int, apiKey: String, apiSecret: String)(implicit app: Application) = {
+    new GestaltSecurityClient(client = app.injector.instanceOf[WSClient], protocol = protocol, hostname = hostname, port = port, creds = GestaltBasicCredentials(apiKey, apiSecret))
+  }
 
   def apply(protocol: Protocol, hostname: String, port: Int, creds: GestaltAPICredentials)(implicit app: Application) =
-    new GestaltSecurityClient(client = WS.client, protocol = protocol, hostname = hostname, port = port, creds = creds)
+    new GestaltSecurityClient(client = app.injector.instanceOf[WSClient], protocol = protocol, hostname = hostname, port = port, creds = creds)
 
   def apply(securityConfig: GestaltSecurityConfig)(implicit app: Application) =
     new GestaltSecurityClient(
-      client = WS.client, protocol = securityConfig.protocol,
+      client = app.injector.instanceOf[WSClient], protocol = securityConfig.protocol,
       hostname = securityConfig.hostname, port = securityConfig.port,
       creds = GestaltBasicCredentials(securityConfig.apiKey,securityConfig.apiSecret)
     )

@@ -2,7 +2,7 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "2.3.1-SNAPSHOT"
+version := "2.4.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).
   enablePlugins(PlayScala).
@@ -51,8 +51,6 @@ publishMavenStyle := true
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
-libraryDependencies += "com.galacticfog" %% "gestalt-io" % "1.0.4"
-
 //
 // Adds project name to prompt like in a Play project
 //
@@ -62,23 +60,12 @@ shellPrompt in ThisBuild := { state => "\033[0;36m" + Project.extract(state).cur
 // Play JSON/WS
 // ----------------------------------------------------------------------------
 
-//libraryDependencies += "com.typesafe.play" % "play-json_2.11" % "2.5.10"
-
 libraryDependencies ++= Seq(
-	"de.leanovate.play-mockws" % "play-mockws_2.11" % "2.4.2" % "test",
+    "com.galacticfog" %% "gestalt-play-json" % "0.4.0",
+	"de.leanovate.play-mockws" %% "play-mockws" % "2.5.1" % "test",
 	specs2 % Test,
     ws
 )
-
-// MockWS for testing
-
-//libraryDependencies += "de.leanovate.play-mockws" % "play-mockws_2.11" % "2.4.2"
-
-
-// jjwt for JSON Web Tokens
-//libraryDependencies += "io.jsonwebtoken" % "jjwt" % "0.6.0" withSources()
-
-//libraryDependencies += specs2 % Test
 
 resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
 
