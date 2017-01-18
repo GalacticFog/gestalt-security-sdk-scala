@@ -1,13 +1,12 @@
 package com.galacticfog.gestalt.security.api
 
 import java.time.Instant
-import java.util.{UUID}
+import java.util.UUID
 
-import com.galacticfog.gestalt.io.util.{PatchUpdate, PatchOp}
+import com.galacticfog.gestalt.patch.PatchOp
 import com.galacticfog.gestalt.security.api.AccessTokenResponse.BEARER
 import com.galacticfog.gestalt.security.api.GestaltToken.ACCESS_TOKEN
 import org.joda.time.DateTime
-import PatchUpdate._
 import com.galacticfog.gestalt.security.api.errors._
 import mockws.MockWS
 import org.junit.runner._
@@ -29,7 +28,6 @@ import play.api.libs.functional.syntax._
 import scala.annotation.meta.field
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -155,8 +153,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         'maybeString -> Json.toJson("string")
       )
       patches must containTheSameElementsAs(Seq(
-        PatchOp("replace", "/name",        JsString("newName")),
-        PatchOp("add",     "/maybeString", JsString("string"))
+        PatchOp("replace", "/name",        Some(JsString("newName"))),
+        PatchOp("add",     "/maybeString", Some(JsString("string")))
       ))
     }
 
@@ -171,7 +169,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         'maybeInt -> Json.toJson(1)
       )
       patches must containTheSameElementsAs(Seq(
-        PatchOp("replace", "/maybeInt", Json.toJson(1))
+        PatchOp("replace", "/maybeInt", Some(Json.toJson(1)))
       ))
     }
 
@@ -187,8 +185,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         'maybeString -> PatchSupport.REMOVE
       )
       patches must containTheSameElementsAs(Seq(
-        PatchOp("remove", "/maybeInt", JsString("")),
-        PatchOp("remove", "/maybeString", JsString(""))
+        PatchOp("remove", "/maybeInt", None),
+        PatchOp("remove", "/maybeString", None)
       ))
     }
 
@@ -224,20 +222,20 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
         val patched = patches.foldLeft(test)( (c,p) =>
           p.path match {
             case "/name" => if (p.op == "replace") {
-              c.copy(name = p.value.as[String])
+              c.copy(name = p.value.get.as[String])
             } else throw new RuntimeException
             case "/reqString" => if (p.op == "replace") {
-              c.copy(reqString = p.value.as[String])
+              c.copy(reqString = p.value.get.as[String])
             } else throw new RuntimeException
             case "/maybeInt" => p.op match {
-              case "replace" if c.maybeInt.isDefined => c.copy(maybeInt = Some(p.value.as[Int]))
-              case "add" if c.maybeInt.isEmpty => c.copy(maybeInt = Some(p.value.as[Int]))
+              case "replace" if c.maybeInt.isDefined => c.copy(maybeInt = Some(p.value.get.as[Int]))
+              case "add" if c.maybeInt.isEmpty => c.copy(maybeInt = Some(p.value.get.as[Int]))
               case "remove" => c.copy(maybeInt = None)
               case _ => throw new RuntimeException
             }
             case "/maybeString" => p.op match {
-              case "replace" if c.maybeString.isDefined => c.copy(maybeString = Some(p.value.as[String]))
-              case "add" if c.maybeString.isEmpty => c.copy(maybeString = Some(p.value.as[String]))
+              case "replace" if c.maybeString.isDefined => c.copy(maybeString = Some(p.value.get.as[String]))
+              case "add" if c.maybeString.isEmpty => c.copy(maybeString = Some(p.value.get.as[String]))
               case "remove" => c.copy(maybeString = None)
               case _ => throw new RuntimeException
             }
@@ -986,8 +984,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       mockPatch(
         uri = s"groups/${testGroup.id}/accounts",
         payload = Json.toJson(Seq(
-          PatchOp("add", "", Json.toJson(addId)),
-          PatchOp("remove", "", Json.toJson(remId))
+          PatchOp("add", "/accounts", Some(Json.toJson(addId))),
+          PatchOp("remove", "/accounts", Some(Json.toJson(remId)))
         )),
         maybeCreds = None,
         ret = updatedAccountList

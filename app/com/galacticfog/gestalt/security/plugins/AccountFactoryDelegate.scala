@@ -2,7 +2,7 @@ package com.galacticfog.gestalt.security.plugins
 
 import java.util.UUID
 
-import com.galacticfog.gestalt.io.util.PatchOp
+import com.galacticfog.gestalt.patch.PatchOp
 import com.galacticfog.gestalt.security.api.{GestaltAccount, GestaltAccountCreate, GestaltAccountUpdate, GestaltBasicCredsToken}
 
 import scala.util.Try
@@ -36,9 +36,9 @@ trait AccountFactoryDelegate {
 
 	def saveAccount(account: GestaltAccountCreate): Try[GestaltAccount]
 
-   def updateAccount(account: GestaltAccount, patches: Seq[PatchOp]): Try[GestaltAccount]
+	def updateAccount(account: GestaltAccount, patches: Seq[PatchOp]): Try[GestaltAccount]
 
-   def updateAccountSDK(account: GestaltAccount, update: GestaltAccountUpdate): Try[GestaltAccount]
+	def updateAccountSDK(account: GestaltAccount, update: GestaltAccountUpdate): Try[GestaltAccount]
 
 	def lookupByAppId(appId: UUID, nameQuery: Option[String], emailQuery: Option[String], phoneQuery: Option[String]): Seq[GestaltAccount]
 

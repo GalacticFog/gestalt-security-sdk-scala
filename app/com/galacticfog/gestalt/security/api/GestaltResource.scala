@@ -1,14 +1,14 @@
 package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
-import scala.language.experimental.macros
 
-import com.galacticfog.gestalt.io.util.PatchOp
+import com.galacticfog.gestalt.patch.PatchOp
+
+import scala.language.experimental.macros
 import play.api.libs.json.{JsNull, JsValue, Json}
 
 import scala.concurrent.Future
 import reflect.runtime.{universe => ru}
-
 import scala.reflect.ClassTag
 
 abstract class GestaltResource {
@@ -31,7 +31,6 @@ trait PatchSupport[A <: PatchSupport[A]] {
 }
 
 object PatchSupport {
-  import com.galacticfog.gestalt.io.util.PatchUpdate._
   val REMOVE = JsNull
 
   def updateImpl[A: ClassTag](orig: A, elems: (Symbol, JsValue)*)(implicit client: GestaltSecurityClient, fjs: play.api.libs.json.Reads[A], m: reflect.Manifest[A], typeTag: ru.TypeTag[A]): Future[A] = {
@@ -61,12 +60,12 @@ object PatchSupport {
         val patch: PatchOp = newVal match {
           case REMOVE =>
             if (!isOptionField) throw new RuntimeException(s"invalid update: JsNull passed, but field ${fieldName} is not Option")
-            PatchOp(op = "remove", path = s"/${fieldName}", value = "")
+            PatchOp(op = "remove", path = s"/${fieldName}", value = None)
           case js: JsValue => curVal match {
             case opt if isOptionField && opt.asInstanceOf[Option[_]].isEmpty =>
-              PatchOp(op = "add", path = s"/${fieldName}", value = js)
+              PatchOp(op = "add", path = s"/${fieldName}", value = Some(js))
             case _ =>
-              PatchOp(op = "replace", path = s"/${fieldName}", value = js)
+              PatchOp(op = "replace", path = s"/${fieldName}", value = Some(js))
           }
         }
         patches + (fieldName -> patch)

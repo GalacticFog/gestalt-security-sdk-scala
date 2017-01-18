@@ -1,9 +1,10 @@
 package com.galacticfog.gestalt.security.api
 
 import java.util.UUID
-import com.galacticfog.gestalt.io.util.PatchOp
+
+import com.galacticfog.gestalt.patch.PatchOp
 import com.galacticfog.gestalt.security.api.json.JsonImports._
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -184,12 +185,11 @@ case object GestaltGroup {
   }
 
   def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[ResourceLink]] = {
-    import com.galacticfog.gestalt.io.util.PatchUpdate._
     client.patch[Seq[ResourceLink]](
       uri = s"groups/${groupId}/accounts",
       payload = Json.toJson(
-        add.map {accountId => PatchOp("add","",Json.toJson(accountId))} ++
-          remove.map {accountId => PatchOp("remove","",Json.toJson(accountId))}
+        add.map {accountId => PatchOp("add","/accounts",Some(Json.toJson(accountId)))} ++
+          remove.map {accountId => PatchOp("remove","/accounts",Some(Json.toJson(accountId)))}
       )
     )
   }

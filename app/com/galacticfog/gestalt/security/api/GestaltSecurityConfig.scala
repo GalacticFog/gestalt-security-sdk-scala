@@ -3,8 +3,6 @@ package com.galacticfog.gestalt.security.api
 import java.util.UUID
 
 import com.fasterxml.jackson.core.JsonParseException
-import com.galacticfog.gestalt.io.ConfigEntityReader
-import com.galacticfog.gestalt.io.GestaltConfig.ConfigEntity
 import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -40,7 +38,7 @@ case class GestaltSecurityConfig(mode: GestaltSecurityMode,
                                  apiKey: String,
                                  apiSecret: String,
                                  appId: Option[UUID],
-                                 realm: Option[String] = None) extends ConfigEntity {
+                                 realm: Option[String] = None) {
 
   def isWellDefined: Boolean = !hostname.isEmpty && !apiKey.isEmpty && !apiSecret.isEmpty && port > 0 && (mode match {
     case DELEGATED_SECURITY_MODE =>
@@ -158,11 +156,11 @@ object GestaltSecurityConfig {
 
   def getSecurityConfigFromFile: Option[GestaltSecurityConfig] = {
     Logger.info("> checking filesystem for Gestalt security config")
-    val reader = new ConfigEntityReader[GestaltSecurityConfig]
     val securityContext = for {
       path <- resolvePath
       data <- loadFile(path)
-      context <- reader.read(data)
+      config <- Try{Json.parse(data)}
+      context <- Try{config.as[GestaltSecurityConfig]}
     } yield context
     securityContext match {
       case Success(c) => Some(c)

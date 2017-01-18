@@ -2,7 +2,7 @@ package com.galacticfog.gestalt.security.plugins
 
 import java.util.UUID
 
-import com.galacticfog.gestalt.io.util.PatchOp
+import com.galacticfog.gestalt.patch.PatchOp
 import com.galacticfog.gestalt.security.api.{GestaltAccount, GestaltGroup}
 
 import scala.util.Try
