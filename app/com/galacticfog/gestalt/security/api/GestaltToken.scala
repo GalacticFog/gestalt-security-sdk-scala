@@ -115,24 +115,29 @@ object GestaltToken {
     )) map Option.apply recover noneWithLog(s"failure retrieving password grant token from org ${orgId}")
   }
 
-  def validateToken(orgFQON: String, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"${orgFQON}/oauth/inspect", Map(
+  def validateToken(orgFQON: String, token: GestaltToken, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"${orgFQON}/oauth/inspect", extraData ++ Map(
       "token" -> token.toString
     ))
   }
 
-  def validateToken(orgId: UUID, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"orgs/${orgId}/oauth/inspect", Map(
+  def validateToken(orgId: UUID, token: GestaltToken, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"orgs/${orgId}/oauth/inspect", extraData ++ Map(
       "token" -> token.toString
     ))
   }
 
-  def validateToken(token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
-    client.postForm[TokenIntrospectionResponse](s"oauth/inspect", Map(
+  def validateToken(token: GestaltToken, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = {
+    client.postForm[TokenIntrospectionResponse](s"oauth/inspect", extraData ++ Map(
       "token" -> token.toString
     ))
   }
 
+  def validateToken(orgFQON: String, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = validateToken(orgFQON, token, Map.empty[String,String])
+
+  def validateToken(orgId: UUID, token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = validateToken(orgId, token, Map.empty[String,String])
+
+  def validateToken(token: GestaltToken)(implicit client: GestaltSecurityClient): Future[TokenIntrospectionResponse] = validateToken(token, Map.empty[String,String])
 
 }
 
@@ -162,6 +167,7 @@ final case class ValidTokenResponse(
   exp: Long,
   iat: Long,
   jti: UUID,
+  extra_data: Option[Map[String,String]],
   gestalt_org_id: UUID,
   gestalt_token_href: String,
   gestalt_account: GestaltAccount,
