@@ -986,8 +986,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       mockPatch(
         uri = s"groups/${testGroup.id}/accounts",
         payload = Json.toJson(Seq(
-          PatchOp("add", "", Json.toJson(addId)),
-          PatchOp("remove", "", Json.toJson(remId))
+          PatchOp("add", "/accounts", Json.toJson(addId)),
+          PatchOp("remove", "/accounts", Json.toJson(remId))
         )),
         maybeCreds = None,
         ret = updatedAccountList

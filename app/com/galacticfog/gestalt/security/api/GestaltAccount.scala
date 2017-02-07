@@ -188,8 +188,8 @@ case object GestaltGroup {
     client.patch[Seq[ResourceLink]](
       uri = s"groups/${groupId}/accounts",
       payload = Json.toJson(
-        add.map {accountId => PatchOp("add","",Json.toJson(accountId))} ++
-          remove.map {accountId => PatchOp("remove","",Json.toJson(accountId))}
+        add.map {accountId => PatchOp("add","/accounts",Json.toJson(accountId))} ++
+          remove.map {accountId => PatchOp("remove","/accounts",Json.toJson(accountId))}
       )
     )
   }
