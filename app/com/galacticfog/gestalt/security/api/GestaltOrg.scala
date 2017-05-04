@@ -153,23 +153,29 @@ case object GestaltOrg {
       None
   }
 
-  def authorizeFrameworkUser(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"auth")
+  def authorizeFrameworkUser(creds: GestaltAPICredentials, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.withCreds(creds).post[GestaltAuthResponse](s"auth", Json.toJson(extraData))
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user with api keys"))
   }
 
-  def authorizeFrameworkUser(orgFQON: String, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"${orgFQON}/auth")
+  def authorizeFrameworkUser(orgFQON: String, creds: GestaltAPICredentials, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.withCreds(creds).post[GestaltAuthResponse](s"${orgFQON}/auth", Json.toJson(extraData))
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user against org ${orgFQON}"))
   }
 
-  def authorizeFrameworkUser(orgId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
-    client.withCreds(creds).postEmpty[GestaltAuthResponse](s"orgs/${orgId}/auth")
+  def authorizeFrameworkUser(orgId: UUID, creds: GestaltAPICredentials, extraData: Map[String,String])(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = {
+    client.withCreds(creds).post[GestaltAuthResponse](s"orgs/${orgId}/auth", Json.toJson(extraData))
       .map(Option.apply)
       .recover(noneWithLog(s"failure authorizing framework user against org ${orgId}"))
   }
+
+  def authorizeFrameworkUser(creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = authorizeFrameworkUser(creds, Map.empty[String,String])
+
+  def authorizeFrameworkUser(orgFQON: String, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = authorizeFrameworkUser(orgFQON, creds, Map.empty[String,String])
+
+  def authorizeFrameworkUser(orgId: UUID, creds: GestaltAPICredentials)(implicit client: GestaltSecurityClient): Future[Option[GestaltAuthResponse]] = authorizeFrameworkUser(orgId, creds, Map.empty[String,String])
 
   def getAppByName(orgId: UUID, appName: String)(implicit client: GestaltSecurityClient): Future[Option[GestaltApp]] = {
     GestaltOrg.listApps(orgId)

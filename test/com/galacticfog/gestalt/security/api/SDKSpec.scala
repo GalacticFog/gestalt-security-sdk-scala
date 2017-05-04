@@ -24,6 +24,7 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import org.mockito.Matchers.{eq => meq}
 
 import scala.annotation.meta.field
 import scala.concurrent.Future
@@ -611,6 +612,81 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       resp must beAnInstanceOf[ValidTokenResponse]
     }
 
+    "pass additional data to token introspection (global)" in new TestParameters {
+      val url = baseUrl + s"/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) =>
+            val ka = data.get("keyA").map(v => Map("keyA" -> v.head))
+            val kb = data.get("keyB").map(v => Map("keyB" -> v.head))
+            val ed = (ka,kb) match {
+              case (Some(a),Some(b)) => Some(a ++ b)
+              case (None,Some(b)) => Some(b)
+              case (Some(a),None) => Some(a)
+              case _ => None
+            }
+            Ok(Json.toJson(testValidTokenResponse.copy(extra_data = ed)))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testToken,Map( "keyA" -> "valA", "keyB" -> "valB" )))
+      resp must beAnInstanceOf[ValidTokenResponse]
+      resp.asInstanceOf[ValidTokenResponse].extra_data must beSome(
+        havePairs("keyA" -> "valA", "keyB" -> "valB")
+      )
+    }
+
+    "pass additional data to token introspection (fqon)" in new TestParameters {
+      val url = baseUrl + s"/${testOrg.fqon}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) =>
+            val ka = data.get("keyA").map(v => Map("keyA" -> v.head))
+            val kb = data.get("keyB").map(v => Map("keyB" -> v.head))
+            val ed = (ka,kb) match {
+              case (Some(a),Some(b)) => Some(a ++ b)
+              case (None,Some(b)) => Some(b)
+              case (Some(a),None) => Some(a)
+              case _ => None
+            }
+            Ok(Json.toJson(testValidTokenResponse.copy(extra_data = ed)))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.fqon,testToken,Map( "keyA" -> "valA", "keyB" -> "valB" )))
+      resp must beAnInstanceOf[ValidTokenResponse]
+      resp.asInstanceOf[ValidTokenResponse].extra_data must beSome(
+        havePairs("keyA" -> "valA", "keyB" -> "valB")
+      )
+    }
+
+    "pass additional data to token introspection (orgid)" in new TestParameters {
+      val url = baseUrl + s"/orgs/${testOrg.id}/oauth/inspect"
+      val route = (POST, url, Action { request =>
+        request.body.asFormUrlEncoded match {
+          case Some(data) if data.get("token") == Some(Seq(testToken.toString)) =>
+            val ka = data.get("keyA").map(v => Map("keyA" -> v.head))
+            val kb = data.get("keyB").map(v => Map("keyB" -> v.head))
+            val ed = (ka,kb) match {
+              case (Some(a),Some(b)) => Some(a ++ b)
+              case (None,Some(b)) => Some(b)
+              case (Some(a),None) => Some(a)
+              case _ => None
+            }
+            Ok(Json.toJson(testValidTokenResponse.copy(extra_data = ed)))
+          case _ => BadRequest(Json.obj("error" -> "test conditions failed"))
+        }
+      })
+      implicit val security = getSecurity(route)
+      val resp: TokenIntrospectionResponse = await(GestaltToken.validateToken(testOrg.id,testToken,Map( "keyA" -> "valA", "keyB" -> "valB" )))
+      resp must beAnInstanceOf[ValidTokenResponse]
+      resp.asInstanceOf[ValidTokenResponse].extra_data must beSome(
+        havePairs("keyA" -> "valA", "keyB" -> "valB")
+      )
+    }
+
     "introspect valid token on server against fqon" in new TestParameters {
       val url = baseUrl + s"/${testOrg.fqon}/oauth/inspect"
       val route = (POST, url, Action { request =>
@@ -816,14 +892,21 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      securityGood.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
-        Future{authResponse}
-      securityBad.postEmpty[GestaltAuthResponse](s"${testOrg.fqon}/auth") returns
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID(), None)
+      securityGood.post[GestaltAuthResponse](meq(s"${testOrg.fqon}/auth"),any)(any,any) answers {
+        (a: Any) =>
+          val arr = a.asInstanceOf[Array[Object]]
+          val ed = arr(1).asInstanceOf[JsValue]
+          Future{authResponse.copy(
+            extraData = ed.asOpt[Map[String,String]]
+          )}
+      }
+      securityBad.post[GestaltAuthResponse](meq(s"${testOrg.fqon}/auth"),any)(any,any) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      await( GestaltOrg.authorizeFrameworkUser(testOrg.fqon, goodCreds) ) must beSome(authResponse)
-
+      val xtra = Map("keyA" -> "valA", "keyA" -> "valB")
+      await( GestaltOrg.authorizeFrameworkUser(testOrg.fqon, goodCreds) ) must beSome(authResponse.copy(extraData = Some(Map.empty)))
+      await( GestaltOrg.authorizeFrameworkUser(testOrg.fqon, goodCreds, xtra) ) must beSome(authResponse.copy(extraData = Some(xtra)))
       await( GestaltOrg.authorizeFrameworkUser(testOrg.fqon, badCreds) ) must beNone
     }
 
@@ -836,13 +919,21 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      securityGood.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
-        Future{authResponse}
-      securityBad.postEmpty[GestaltAuthResponse](s"orgs/${testOrg.id}/auth") returns
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID(), None)
+      securityGood.post[GestaltAuthResponse](meq(s"orgs/${testOrg.id}/auth"),any)(any,any) answers {
+        (a: Any) =>
+          val arr = a.asInstanceOf[Array[Object]]
+          val ed = arr(1).asInstanceOf[JsValue]
+          Future{authResponse.copy(
+            extraData = ed.asOpt[Map[String,String]]
+          )}
+      }
+      securityBad.post[GestaltAuthResponse](meq(s"orgs/${testOrg.id}/auth"),any)(any,any) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      await(GestaltOrg.authorizeFrameworkUser(testOrg.id, goodCreds) ) must beSome(authResponse)
+      val xtra = Map("keyA" -> "valA", "keyA" -> "valB")
+      await(GestaltOrg.authorizeFrameworkUser(testOrg.id, goodCreds) ) must beSome(authResponse.copy(extraData = Some(Map.empty)))
+      await(GestaltOrg.authorizeFrameworkUser(testOrg.id, goodCreds, xtra) ) must beSome(authResponse.copy(extraData = Some(xtra)))
       await(GestaltOrg.authorizeFrameworkUser(testOrg.id, badCreds) ) must beNone
     }
 
@@ -855,13 +946,23 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       security.withCreds(goodCreds) returns securityGood
       security.withCreds(badCreds)  returns securityBad
       val grant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID())
-      securityGood.postEmpty[GestaltAuthResponse](s"auth") returns
-        Future{authResponse}
-      securityBad.postEmpty[GestaltAuthResponse](s"auth") returns
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), UUID.randomUUID(), None)
+      securityGood.post[GestaltAuthResponse](meq(s"auth"),any)(any,any) answers {
+        (a: Any) =>
+          val arr = a.asInstanceOf[Array[Object]]
+          val ed = arr(1).asInstanceOf[JsValue]
+          Future {
+            authResponse.copy(
+              extraData = ed.asOpt[Map[String, String]]
+            )
+          }
+      }
+      securityBad.post[GestaltAuthResponse](meq(s"auth"),any)(any,any) returns
         Future.failed(UnauthorizedAPIException("","",""))
 
-      await(GestaltOrg.authorizeFrameworkUser(goodCreds)) must beSome(authResponse)
+      val xtra = Map("keyA" -> "valA", "keyA" -> "valB")
+      await(GestaltOrg.authorizeFrameworkUser(goodCreds)) must beSome(authResponse.copy(extraData = Some(Map.empty)))
+      await(GestaltOrg.authorizeFrameworkUser(goodCreds, xtra) ) must beSome(authResponse.copy(extraData = Some(xtra)))
       await(GestaltOrg.authorizeFrameworkUser(badCreds)) must beNone
     }
 
@@ -894,7 +995,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
       implicit val security = getMockSecurity
       val testGrant = GestaltRightGrant(id = UUID.randomUUID, "createSubOrg",None, appId = testApp.id)
       val testGroup = GestaltGroup(id = UUID.randomUUID, name = "newGroup", description = None, directory = testDir, disabled = false, accounts = Seq())
-      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant), testOrg.id)
+      val authResponse = GestaltAuthResponse(testAccount, groups = Seq(testGroup.getLink), rights = Seq(testGrant), testOrg.id, None)
 
       val create = GestaltGroupCreateWithRights(
         name = testGroup.name,
@@ -1224,7 +1325,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
 
     "authenticate a user" in new TestParameters {
       val grant = GestaltRightGrant(id = UUID.randomUUID, "launcher:full_access",None, appId = testApp.id)
-      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), orgId = UUID.randomUUID())
+      val authResponse = GestaltAuthResponse(testAccount, Seq(), Seq(grant), orgId = UUID.randomUUID(), None)
       val creds = GestaltBasicCredsToken("jdoe","monkey")
       val url = baseUrl + s"/apps/${testApp.id}/auth"
       val route = (POST, url, Action(BodyParsers.parse.json) { request =>
