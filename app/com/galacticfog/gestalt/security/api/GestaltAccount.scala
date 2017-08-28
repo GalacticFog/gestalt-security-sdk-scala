@@ -146,7 +146,9 @@ case class GestaltAccountCreateWithRights(username: String,
                                           rights: Option[Seq[GestaltGrantCreate]] = None,
                                           description: Option[String] = None)
 
-case class GestaltGroup(id: UUID, name: String, description: Option[String], directory: GestaltDirectory, disabled: Boolean, accounts: Seq[ResourceLink]) extends GestaltResource {
+case class GestaltGroup(id: UUID, name: String, description: Option[String], directory: GestaltDirectory, disabled: Boolean, accounts: Seq[ResourceLink])
+  extends GestaltResource
+  with PatchSupport[GestaltGroup] {
 
   override val href: String = s"/groups/${id}"
 
@@ -164,6 +166,9 @@ case class GestaltGroupCreate(name: String,
 case class GestaltGroupCreateWithRights(name: String,
                                         rights: Option[Seq[GestaltGrantCreate]] = None,
                                         description: Option[String] = None)
+
+case class GestaltGroupUpdate(name: Option[String] = None,
+                              description: Option[String] = None)
 
 case object GestaltGroup {
 
@@ -183,7 +188,13 @@ case object GestaltGroup {
     client.deleteDR(s"groups/${groupId}") map {_.wasDeleted}
   }
 
-  def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])(implicit client: GestaltSecurityClient): Future[Seq[ResourceLink]] = {
+  def updateGroup(groupId: UUID, update: GestaltGroupUpdate)
+                 (implicit client: GestaltSecurityClient): Future[GestaltGroup] = {
+    client.patch[GestaltGroup](s"groups/${groupId}", Json.toJson(update))
+  }
+
+  def updateMembership(groupId: UUID, add: Seq[UUID], remove: Seq[UUID])
+                      (implicit client: GestaltSecurityClient): Future[Seq[ResourceLink]] = {
     import com.galacticfog.gestalt.io.util.PatchUpdate._
     client.patch[Seq[ResourceLink]](
       uri = s"groups/${groupId}/accounts",

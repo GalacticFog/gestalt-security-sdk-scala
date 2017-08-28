@@ -167,6 +167,12 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
       there was one(testHolder).withHeaders(HeaderNames.AUTHORIZATION -> tokenCreds.headerValue)
     }
 
+    "not throw an exception for bad basic creds" in {
+      GestaltAPICredentials.getCredentials(
+        "Basic blah:blah"
+      ) must beNone
+    }
+
     "consistently encode and decode Basic authorization" in {
       val creds = GestaltBasicCredentials("root", "letmein")
       GestaltAPICredentials.getCredentials(
