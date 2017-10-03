@@ -2,7 +2,7 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "2.4.2"
+version := "2.4.3-SNAPSHOT"
 
 lazy val root = (project in file(".")).
   enablePlugins(PlayScala).
