@@ -103,6 +103,7 @@ object JsonImports {
   implicit val rightCreateRequest = Json.format[GestaltGrantCreate]
   implicit val accountCreateRequest = Json.format[GestaltAccountCreate]
   implicit val accountUpdateRequest = Json.format[GestaltAccountUpdate]
+  implicit val groupUpdateRequest = Json.format[GestaltGroupUpdate]
   implicit val accountCreateRequestWithRights = Json.format[GestaltAccountCreateWithRights]
   implicit val groupCreateRequest = Json.format[GestaltGroupCreate]
   implicit val groupCreateRequestWithRights = Json.format[GestaltGroupCreateWithRights]
