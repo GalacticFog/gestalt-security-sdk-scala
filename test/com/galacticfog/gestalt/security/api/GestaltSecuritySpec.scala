@@ -49,7 +49,7 @@ class GestaltSecuritySpec extends Specification with Mockito with FutureAwaits w
 
     "use application wsclient by default" in new WithApplication {
       val security = GestaltSecurityClient(HTTP,"localhost",9000,"someKey","someSecret")
-      security.client == WS.client
+      security.client == app.injector.instanceOf[WSClient]
     }
 
     "allow credentials override" in new WithApplication {

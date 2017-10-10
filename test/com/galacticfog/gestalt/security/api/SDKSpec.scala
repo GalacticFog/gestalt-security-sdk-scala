@@ -59,7 +59,7 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     val baseUrl = s"http://${hostname}:${port}"
 
     val testOrg = GestaltOrg(UUID.randomUUID,"cdf.cu","cdf.cu",None,None,Seq())
-    val testDir = GestaltDirectory(UUID.randomUUID,"Staff",Some("CDF staff"),testOrg.id)
+    val testDir = GestaltDirectory(UUID.randomUUID,"Staff",Some("CDF staff"),testOrg.id, None, DIRECTORY_TYPE_INTERNAL.label)
     val testApp = GestaltApp(UUID.randomUUID,"inbox.cdf.cu",None,testOrg.id,false)
     val testAccount = GestaltAccount(
       id = UUID.randomUUID,
@@ -832,8 +832,8 @@ class SDKSpec extends Specification with Mockito with FutureAwaits with DefaultA
     }
 
     "list directories" in new TestParameters {
-      val dir1 = GestaltDirectory(id = UUID.randomUUID, name = "dir1", Some("desc 1"), testOrg.id)
-      val dir2 = GestaltDirectory(id = UUID.randomUUID, name = "dir2", Some("desc 2"), testOrg.id)
+      val dir1 = GestaltDirectory(id = UUID.randomUUID, name = "dir1", Some("desc 1"), testOrg.id, None, DIRECTORY_TYPE_INTERNAL.label)
+      val dir2 = GestaltDirectory(id = UUID.randomUUID, name = "dir2", Some("desc 2"), testOrg.id, None, DIRECTORY_TYPE_INTERNAL.label)
       val testResp = Json.toJson( Seq(dir1,dir2) )
       val url = baseUrl + s"/orgs/${testOrg.id}/directories"
       val route = (GET, url, Action { Ok(testResp) })

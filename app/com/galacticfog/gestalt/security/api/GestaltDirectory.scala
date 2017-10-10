@@ -21,7 +21,7 @@ final case object DIRECTORY_TYPE_LDAP     extends DirectoryType { val label = "L
 
 case class GestaltDirectoryCreate(name: String, directoryType: DirectoryType, description: Option[String] = None, config: Option[JsValue] = None)
 
-case class GestaltDirectory(id: UUID, name: String, description: Option[String], orgId: UUID, config: Option[JsValue] = None)
+case class GestaltDirectory(id: UUID, name: String, description: Option[String], orgId: UUID, config: Option[JsValue] = None, directoryType: String)
   extends GestaltResource with PatchSupport[GestaltDirectory] {
 
   override val href: String = s"/directories/${id}"
