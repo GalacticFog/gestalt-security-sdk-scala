@@ -1,14 +1,14 @@
 package com.galacticfog.gestalt.security.api
 
+import com.galacticfog.gestalt.json.Js
 import com.galacticfog.gestalt.security.api.errors._
 import com.galacticfog.gestalt.security.sdk.BuildInfo
 import play.api.http.{HeaderNames, MimeTypes}
-import play.api.{Logger, Application}
+import play.api.{Application, Logger}
 import play.api.libs.json._
 import play.api.libs.ws._
 
 import scala.concurrent.Future
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
 import com.galacticfog.gestalt.security.api.json.JsonImports._
@@ -16,6 +16,8 @@ import com.galacticfog.gestalt.security.api.json.JsonImports._
 case class DeleteResult(wasDeleted: Boolean)
 
 class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val hostname: String, val port: Int, val creds: GestaltAPICredentials) {
+
+  val logger = Logger(this.getClass)
 
   def withCreds(creds: GestaltAPICredentials) = new GestaltSecurityClient(
     client = this.client,
@@ -28,12 +30,14 @@ class GestaltSecurityClient(val client: WSClient, val protocol: Protocol, val ho
   def validate[T](json: JsValue)(implicit m: reflect.Manifest[T], rds: Reads[T]): T = {
     json.validate[T] match {
       case s: JsSuccess[T] => s.get
-      case e: JsError => throw new APIParseException(
-        resource = "",
-        message = "invalid payload",
-        devMessage = s"Error parsing a successful API response; was expecting JSON representation of SDK object ${m.toString}. Likely culprit is a version mismatch between the client and the API. Please contact the developers.",
-        json = json
-      )
+      case e: JsError =>
+        logger.error(s"error parsing response from gestalt-security: ${Js.errorString(e)}")
+        throw new APIParseException(
+          resource = "",
+          message = "invalid payload",
+          devMessage = s"Error parsing a successful API response; was expecting JSON representation of SDK object ${m.toString}. Likely culprit is a version mismatch between the client and the API. Please contact the developers.",
+          json = json
+        )
     }
   }
 
