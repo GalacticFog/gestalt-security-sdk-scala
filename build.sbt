@@ -2,7 +2,7 @@ name := """gestalt-security-sdk-scala"""
 
 organization := "com.galacticfog"
 
-version := "2.4.6"
+version := "2.4.7"
 
 lazy val root = (project in file(".")).
   enablePlugins(PlayScala).
@@ -49,7 +49,12 @@ publishTo <<= version { (v: String) =>
 
 publishMavenStyle := true
 
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+credentials += Credentials(
+ "Artifactory Realm",
+ "galacticfog.artifactoryonline.com",
+ sys.env("GF_ARTIFACTORY_USER"),
+ sys.env("GF_ARTIFACTORY_PWD")
+)
 
 //
 // Adds project name to prompt like in a Play project
